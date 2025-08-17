@@ -6,6 +6,9 @@
 <PageTitle>Matrix LED Display Demo</PageTitle>
 
 <h1>Matrix LED Display Demo</h1>
+<div>
+    <img src="mi-matrix-display-400x334.png" />
+</div>
 <button disabled="@(!isWebBluetoothEnabled || device != null)" @onclick=ConnectClick>Connect</button>
 <button disabled="@(device == null)" @onclick=DisconnectClick>Disconnect</button>
 <p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
