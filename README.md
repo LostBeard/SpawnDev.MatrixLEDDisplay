@@ -1,9 +1,14 @@
 # SpawnDev.MatrixLEDDisplay
 Blazor WebAssembly code and demo app for communicating with the "Matrix LED Display" by Merkury Innovations. 
 
-This $20 USB powered display features a 16x16 multi-color LED grid that can be found at places like Walmart [here](https://www.walmart.com/ip/Merkury-Innovations-Bluetooth-Matrix-LED-Pixel-Display/5150283693) and communicates with a phone app using Bluetooth Low Energy (BLE.)
+This $20 USB powered display features a 16x16 multi-color LED grid
+that can be found at places like Walmart [here](https://www.walmart.com/ip/Merkury-Innovations-Bluetooth-Matrix-LED-Pixel-Display/5150283693).
+It communicates with an 
+Android phone app [MatrixPanel Plus](https://play.google.com/store/apps/details?id=com.wzjledaxc.ledplus) app,
+or an iPhone app [Matrix Panel Plus](https://apps.apple.com/us/app/matrix-panel-plus/id6743264417)
+using Bluetooth Low Energy (BLE.)
 
-There is a big problem with this display, as one YouTube [reviewer](https://www.youtube.com/watch?v=QN0TxJoeTNk) found out... the phone-only app that is REQUIRED to control the device, does not work on most phones.
+There is a bit of a problem with this display, as one YouTube [reviewer](https://www.youtube.com/watch?v=QN0TxJoeTNk) found out... BLE does not work on every phone, preventing the app from communicating with the display.
 
 So if you bought one of these cool displays and want an alternative to the default app, this library and demo app app can help you do that.
 
