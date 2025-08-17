@@ -1,6 +1,8 @@
 # SpawnDev.MatrixLEDDisplay
 Blazor WebAssembly code and demo app for communicating with the "Matrix LED Display" by Merkury Innovations. 
 
+[Demo Web App](https://lostbeard.github.io/SpawnDev.MatrixLEDDisplay/)
+
 ![Matrix LED Display](https://raw.githubusercontent.com/LostBeard/SpawnDev.MatrixLEDDisplay/master/SpawnDev.MatrixLEDDisplay.Demo/wwwroot/mi-matrix-display-400x334.png)
 
 This neat $20 USB powered display features a 16x16 multi-color LED grid
