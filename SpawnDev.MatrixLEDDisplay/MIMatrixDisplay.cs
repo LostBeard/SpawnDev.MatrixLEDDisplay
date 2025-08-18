@@ -7,6 +7,18 @@ namespace SpawnDev.MatrixLEDDisplay
     {
         BlazorJSRuntime JS;
 
+
+        public string DeviceId
+        {
+            get
+            {
+                var t = device?.Id;
+                var bytes = Convert.FromBase64String(t);
+                var ret = Convert.ToHexString(bytes);
+                return ret;
+            }
+        }
+
         // Define BLE Device Specs
         string deviceName = "MI Matrix Display";
         string bleService = "0000ffd0-0000-1000-8000-00805f9b34fb";

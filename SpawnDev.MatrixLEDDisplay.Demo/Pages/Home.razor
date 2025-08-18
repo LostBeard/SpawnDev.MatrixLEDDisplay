@@ -17,7 +17,6 @@
 {
     <div>
         <div>Name: @display.device?.Name</div>
-        <div>Id: @display.device?.Id</div>
         <div>
             <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Send Test Image</button>
             <button disabled="@(!display.Connected)" @onclick=@(() => DisplayService.RemoveDisplay(display))>Disconnect</button>
