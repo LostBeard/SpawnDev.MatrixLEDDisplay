@@ -179,7 +179,8 @@ namespace SpawnDev.MatrixLEDDisplay
             }
             if (device != null)
             {
-                if (forget) device.Forget();
+                // Forget is disabled... it is listed as a method for BluetoothDevice but does not exist in Chrome...
+                //if (forget) device.Forget();
                 device.OnGATTServerDisconnected -= Device_OnGATTServerDisconnected;
                 device.Dispose();
                 device = null;
