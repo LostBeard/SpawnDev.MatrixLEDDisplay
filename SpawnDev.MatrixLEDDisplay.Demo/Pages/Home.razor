@@ -10,7 +10,7 @@
 <div>
     <img src="mi-matrix-display-400x334.png" width="48" />
 </div>
-<button disabled="@(!isWebBluetoothEnabled || DisplayService.Displays.Any() || _connecting)" @onclick=ConnectClick>Connect</button>
+<button disabled="@(!isWebBluetoothEnabled || _connecting)" @onclick=ConnectClick>Connect</button>
 <p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
 
 @foreach (var display in DisplayService.Displays)
