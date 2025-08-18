@@ -1,0 +1,170 @@
+/* /UI/UIButton.razor.rz.scp.css */
+button[b-zwwtveiavl] {
+    padding: 4px 2px 2px 2px;
+    margin: 0;
+    border-radius: 1.5em;
+    vertical-align: middle;
+    border: 0;
+    color: #dddddd;
+    background-color: #120101;
+    cursor: pointer;
+}
+
+    button:hover[b-zwwtveiavl] {
+        background-color: #191616;
+    }
+
+    button:active[b-zwwtveiavl] {
+        background-color: #393636;
+    }
+
+    button[disabled][b-zwwtveiavl] {
+        opacity: 0.2;
+        cursor: auto;
+    }
+        button[disabled]:hover[b-zwwtveiavl] {
+            background-color: #120101;
+        }
+
+        button[disabled]:active[b-zwwtveiavl] {
+            background-color: #120101;
+        }
+/* /UI/UIIcon.razor.rz.scp.css */
+div[b-timojphc87] {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+}
+/* /UI/UILink.razor.rz.scp.css */
+
+
+a[b-iedwc49apu] {
+    padding: 4px 2px 2px 2px;
+    margin: 0;
+    border-radius: 0.25em;
+    vertical-align: middle;
+    border: 0;
+    color: #dddddd;
+    cursor: pointer;
+    -webkit-text-decoration: inherit;
+    text-decoration: inherit;
+    display: inline-block;
+}
+
+    a:hover[b-iedwc49apu] {
+        background-color: #191616;
+    }
+
+    a:active[b-iedwc49apu] {
+        background-color: #393636;
+    }
+
+    a[disabled][b-iedwc49apu] {
+        opacity: 0.2;
+        cursor: auto;
+    }
+        a[disabled]:hover[b-iedwc49apu] {
+            background-color: #120101;
+        }
+
+        a[disabled]:active[b-iedwc49apu] {
+            background-color: #120101;
+        }
+/* /UI/UIToggle.razor.rz.scp.css */
+.ui-toggle[b-d8gl9rexgz] {
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    position: relative;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+.ui-toggle-inner[b-d8gl9rexgz] {
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    cursor: pointer;
+}
+
+[b-d8gl9rexgz] .ui-toggle-inner > * {
+    max-width: 100%;
+    max-height: 100%;
+    cursor: pointer;
+}
+
+.ui-toggle-progress[b-d8gl9rexgz] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1;
+    padding: 4px !important;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+
+button[b-d8gl9rexgz] {
+    padding: 4px 2px 2px 2px;
+    margin: 0;
+    border-radius: 1.5em;
+    vertical-align: middle;
+    border: 0;
+    color: #dddddd;
+    background-color: #120101;
+    cursor: pointer;
+}
+
+    button > div[b-d8gl9rexgz] {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-content: center;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+
+    button:hover[b-d8gl9rexgz] {
+        background-color: #191616;
+    }
+
+    button:active[b-d8gl9rexgz] {
+        background-color: #393636;
+    }
+
+    button[disabled][b-d8gl9rexgz] {
+        opacity: 0.2;
+        cursor: auto;
+    }
+
+        button[disabled]:hover[b-d8gl9rexgz] {
+            background-color: #120101;
+        }
+
+        button[disabled]:active[b-d8gl9rexgz] {
+            background-color: #120101;
+        }
+
+
+.busy-ring[b-d8gl9rexgz] {
+    mask: conic-gradient(#0000,#000) subtract, linear-gradient(#000 0 0) content-box;
+    animation: busySpinner-b-d8gl9rexgz 2s linear infinite;
+    background: #07e8d6 !important; /* the color */
+}
+
+@keyframes busySpinner-b-d8gl9rexgz {
+    to {
+        transform: rotate(1turn)
+    }
+}
