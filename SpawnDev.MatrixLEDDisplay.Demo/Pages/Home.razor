@@ -10,15 +10,18 @@
 <div>
     <img src="mi-matrix-display-400x334.png" width="48" />
 </div>
-<button disabled="@(!isWebBluetoothEnabled || DisplayService.Displays.Any())" @onclick=ConnectClick>Connect</button>
-<button disabled="@(!DisplayService.Displays.Any())" @onclick=DisconnectClick>Disconnect</button>
+<button disabled="@(!isWebBluetoothEnabled || DisplayService.Displays.Any() || _connecting)" @onclick=ConnectClick>Connect</button>
 <p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
-<button disabled="@(!DisplayService.Displays.Any())" @onclick=ConnectAndSendRainbow>Send Colors</button>
 
-@foreach(var display in DisplayService.Displays)
+@foreach (var display in DisplayService.Displays)
 {
     <div>
-        <div>@display.device?.Id</div>
+        <div>Name: @display.device?.Name</div>
+        <div>Id: @display.device?.Id</div>
+        <div>
+            <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Send Test Image</button>
+            <button disabled="@(!display.Connected)" @onclick=@(() => DisplayService.RemoveDisplay(display))>Disconnect</button>
+        </div>
         <div>
             <LEDMatrix Data="display.Data"></LEDMatrix>
         </div>
@@ -65,14 +68,28 @@
             }
             else
             {
-                bleState = "Web Bluetooth supported";
+                bleState = "Ready";
             }
             StateHasChanged();
         }
     }
+    bool _connecting = false;
     async Task ConnectClick()
     {
-        await DisplayService.ConnectDisplay();
+        if (_connecting || !isWebBluetoothEnabled) return;
+        _connecting = true;
+        bleState = "Connecting...";
+        StateHasChanged();
+        try
+        {
+            await DisplayService.ConnectDisplay();
+        }
+        finally
+        {
+            _connecting = false;
+            bleState = DisplayService.Displays.Any() ? "Connected" : "Ready";
+            StateHasChanged();
+        }
     }
     async Task DisconnectClick()
     {
@@ -184,7 +201,6 @@
     // double _matrixDisplayGamm = 0.33d;
     async Task ConnectAndSendRainbow()
     {
-
         var display = DisplayService.Displays.FirstOrDefault();
         if (display == null)
         {
@@ -203,11 +219,11 @@
         //     await Task.Delay(2);
 
         //     var iamgeData = cre
-            
+
         //     var imageDataGammaCorrected = GenerateRainbowPicture(0.33d);
         //     var imageData = GenerateRainbowPicture(0.66d);
         //     await SendPicture(characteristic, imageDataGammaCorrected, imageData);
-            
+
         //     StateHasChanged();
         // }
     }
