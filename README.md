@@ -1,5 +1,5 @@
 # SpawnDev.MatrixLEDDisplay
-Blazor WebAssembly code and demo app for communicating with the "Matrix LED Display" by Merkury Innovations. 
+Blazor WebAssembly code and demo app for communicating with the "Matrix LED Display" by Merkury Innovations, aka "MI Matrix Display". 
 
 [Demo Web App](https://lostbeard.github.io/SpawnDev.MatrixLEDDisplay/)
 
