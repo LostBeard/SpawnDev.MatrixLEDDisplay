@@ -1,0 +1,47 @@
+﻿<a href="@Href" title="@Title" disabled="@Disabled" class="@Class" style="@Style" target="@Target">
+    @if (!string.IsNullOrEmpty(Image))
+    {
+        <UIImage Style="@ImageStyle" Src="@Image" />
+    }
+    else if (!string.IsNullOrEmpty(Icon))
+    {
+        <UIIcon Style="@IconStyle" Icon="@Icon" />
+    }
+    @Text
+</a>
+
+@code {
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public string? Image { get; set; }
+
+    [Parameter]
+    public string? Icon { get; set; }
+
+    [Parameter]
+    public string Class { get; set; } = "";
+
+    [Parameter]
+    public string Style { get; set; } = "";
+
+    [Parameter]
+    public string ImageStyle { get; set; } = "";
+
+    [Parameter]
+    public string IconStyle { get; set; } = "";
+
+    [Parameter]
+    public string Href { get; set; } = "";
+
+    [Parameter]
+    public string Target { get; set; } = "";
+
+    [Parameter]
+    public bool Disabled { get; set; }
+}

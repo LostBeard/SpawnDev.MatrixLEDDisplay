@@ -36,6 +36,9 @@ namespace SpawnDev.MatrixLEDDisplay
                 display.Dispose();
                 return null;
             }
+            // remove the device if it was previously connected and sitll in the list
+            RemoveDisplay(display.device!.Id);
+            // add
             Displays.Add(display);
             OnDisplayAdded?.Invoke(display);
             return display;

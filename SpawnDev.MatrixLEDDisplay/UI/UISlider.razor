@@ -1,0 +1,36 @@
+﻿<input @onchange=OnChange style="@Style" name="@Name" type="range" min="@Min" max="@Max" value="@Value" step="@(Step == 0 ? "any" : Step.ToString())" />
+
+@code {
+    [Parameter]
+    public double Max { get; set; }
+
+    [Parameter]
+    public double Min { get; set; }
+
+    [Parameter]
+    public double Value { get; set; }
+
+    [Parameter]
+    public double Step { get; set; }
+
+    [Parameter]
+    public string? Style { get; set; }
+
+    [Parameter]
+    public string? Name { get; set; }
+
+    [Parameter]
+    public EventCallback<double> Change { get; set; }
+
+    async Task OnChange(ChangeEventArgs args)
+    {
+        var v = (string?)args.Value;
+        if (string.IsNullOrEmpty(v))
+        {
+            return;
+        }
+        if (!double.TryParse(v, out var value)) return;
+        Value = value;
+        await Change.InvokeAsync(value);
+    }
+}

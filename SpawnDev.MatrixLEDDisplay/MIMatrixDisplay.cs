@@ -1,12 +1,12 @@
 ﻿using SpawnDev.BlazorJS;
 using SpawnDev.BlazorJS.JSObjects;
+using SpawnDev.BlazorJS.Toolbox;
 
 namespace SpawnDev.MatrixLEDDisplay
 {
     public class MIMatrixDisplay : IDisposable
     {
         BlazorJSRuntime JS;
-
 
         public string DeviceId
         {
@@ -52,6 +52,38 @@ namespace SpawnDev.MatrixLEDDisplay
             }
             return ret;
         }
+        public async Task SelectAndLoadImage()
+        {
+            if (bleServer != null && bleServer.Connected && bleServiceFound != null && characteristic != null)
+            {
+                var files = await FilePicker.ShowOpenFilePicker("", false);
+                if (files == null || files.Length == 0) return;
+                var file = files[0];
+                var imageDataUrl = await FileReader.ReadAsDataURLAsync(file);
+                using var image = await HTMLImageElement.CreateFromImageAsync(imageDataUrl);
+                using var canvas = new OffscreenCanvas(16, 16);
+                using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
+                ctx.DrawImage(image, 0, 0, 16, 16);
+                var imageDataBytes = ctx.GetImageBytes()!;
+
+                var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
+                await characteristic.WriteValueWithoutResponse(initCommand);
+                await Task.Delay(2);
+                //
+                await SendPicture(imageDataBytes);
+            }
+        }
+        double _gamma = 0.5d;
+        public double Gamma
+        {
+            get => _gamma;
+            set
+            {
+                if (_gamma == value) return;
+                _gamma = value;
+                _ = SendPicture();
+            }
+        }
         public async Task SendTestPicture()
         {
             if (bleServer != null && bleServer.Connected && bleServiceFound != null && characteristic != null)
@@ -61,7 +93,7 @@ namespace SpawnDev.MatrixLEDDisplay
                 await Task.Delay(2);
                 //
                 var imageData = CreateTestPicture(1);
-                await SendPicture(characteristic, imageData);
+                await SendPicture(imageData);
             }
         }
         public async Task<bool> Connect()
@@ -187,28 +219,59 @@ namespace SpawnDev.MatrixLEDDisplay
             }
         }
         public (byte r, byte g, byte b)[] Data { get; private set; } = new (byte r, byte g, byte b)[256];
-        public async Task SendPicture(BluetoothRemoteGATTCharacteristic characteristic, (byte r, byte g, byte b)[] imageData)
+        public Task SendPicture(byte[] imageDataBytes)
         {
-            for (var blockIndex = 0; blockIndex < 8; blockIndex++)
+            var imageData = new (byte r, byte g, byte b)[256];
+            for (int n = 0; n < imageDataBytes.Length; n += 4)
             {
-                var blockData = new byte[100];
-                blockData[0] = 0xbc;
-                blockData[1] = 0x0f;
-                blockData[2] = (byte)((blockIndex + 1) & 0xff);
-                for (var i = 0; i < 32; i++)
-                {
-                    var pixelIndex = blockIndex * 32 + i;
-                    blockData[3 + i * 3] = imageData[pixelIndex].r; // Red
-                    blockData[3 + i * 3 + 1] = imageData[pixelIndex].g; // Green
-                    blockData[3 + i * 3 + 2] = imageData[pixelIndex].b; // Blue
-                }
-                blockData[99] = 0x55;
-                Console.WriteLine($"Sending block {blockIndex + 1} / 8");
-                await characteristic.WriteValueWithoutResponse(blockData);
-                await Task.Delay(5);
+                var i = n / 4;
+                imageData[i] = (imageDataBytes[n], imageDataBytes[n + 1], imageDataBytes[n + 2]);
             }
-            Data = imageData;
-            StateHasChanged();
+            return SendPicture(imageData);
+        }
+        public Task SendPicture()
+        {
+            return SendPicture(Data);
+        }
+        byte GammaCorrect(byte v, double gammaCorrection)
+        {
+            var s = (double)v / 255d;
+            var gc  = Math.Pow(s, gammaCorrection);
+            return (byte)(gc * 255d);
+        }
+        public async Task<bool> SendPicture((byte r, byte g, byte b)[] imageData)
+        {
+            if (characteristic == null) return false;
+            try
+            {
+                var gammaCorrection = 1d / Gamma;
+                for (var blockIndex = 0; blockIndex < 8; blockIndex++)
+                {
+                    var blockData = new byte[100];
+                    blockData[0] = 0xbc;
+                    blockData[1] = 0x0f;
+                    blockData[2] = (byte)((blockIndex + 1) & 0xff);
+                    for (var i = 0; i < 32; i++)
+                    {
+                        var pixelIndex = blockIndex * 32 + i;
+                        blockData[3 + i * 3] = GammaCorrect(imageData[pixelIndex].r, gammaCorrection); // Red
+                        blockData[3 + i * 3 + 1] = GammaCorrect(imageData[pixelIndex].g, gammaCorrection); // Green
+                        blockData[3 + i * 3 + 2] = GammaCorrect(imageData[pixelIndex].b, gammaCorrection); // Blue
+                    }
+                    blockData[99] = 0x55;
+                    Console.WriteLine($"Sending block {blockIndex + 1} / 8");
+                    await characteristic.WriteValueWithoutResponse(blockData);
+                    await Task.Delay(5);
+                }
+                Data = imageData;
+                StateHasChanged();
+                return true;
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return false;
         }
 
         public void Dispose()
