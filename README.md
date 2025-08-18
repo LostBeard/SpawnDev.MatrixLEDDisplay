@@ -13,7 +13,7 @@ Android phone app [MatrixPanel Plus](https://play.google.com/store/apps/details?
 or an iPhone app [Matrix Panel Plus](https://apps.apple.com/us/app/matrix-panel-plus/id6743264417)
 using Bluetooth Low Energy (BLE.)
 
-Some buyers have had problem with this display, like this YouTube [reviewer](https://www.youtube.com/watch?v=QN0TxJoeTNk)... 
+Some buyers have had a problem with this display, like this YouTube [reviewer](https://www.youtube.com/watch?v=QN0TxJoeTNk)... 
 The problem is, BLE does not work with some (a lot?) of phones, preventing the company's app from controlling the display.
 
 So if you bought one of these cool displays and want an alternative to the default app, this library and demo app app can help you do that.
