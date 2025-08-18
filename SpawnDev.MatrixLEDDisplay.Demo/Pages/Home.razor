@@ -13,8 +13,6 @@
 <button disabled="@(device == null)" @onclick=DisconnectClick>Disconnect</button>
 <p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
 <button disabled="@(!connected)" @onclick=ConnectAndSendRainbow>Send Colors</button>
-@* <button disabled="@(!connected)" @onclick=OnClick>ON</button>
-<button disabled="@(!connected)" @onclick=OffClick>OFF</button> *@
 <div>
     <h2>Current Notification Value</h2>
     <p><span>@retrievedValue</span></p>
@@ -27,17 +25,17 @@
     BlazorJSRuntime JS { get; set; } = default!;
 
     bool isWebBluetoothEnabled = false;
-    string retrievedValue = "NaN";
+    string retrievedValue = "";
     string timestamp = "";
     string bleState = "Disconnected";
 
-    //Define BLE Device Specs
+    // Define BLE Device Specs
     string deviceName = "MI Matrix Display";
     string bleService = "0000ffd0-0000-1000-8000-00805f9b34fb";
     string ledCharacteristicUUID = "0000ffd1-0000-1000-8000-00805f9b34fb";
     string sensorCharacteristic = "0000ffd2-0000-1000-8000-00805f9b34fb";
 
-    //Global Variables to Handle Bluetooth
+    // Global Variables to Handle Bluetooth
     BluetoothDevice? device;
     BluetoothRemoteGATTServer? bleServer;
     BluetoothRemoteGATTService? bleServiceFound;
@@ -62,14 +60,6 @@
             StateHasChanged();
         }
     }
-    async Task OnClick()
-    {
-        //await ConnectAndSendRainbow();
-    }
-    async Task OffClick()
-    {
-        //await WriteOnCharacteristic(0);
-    }
     async Task ConnectClick()
     {
         if (connected)
@@ -78,7 +68,7 @@
         }
         try
         {
-            //  chrome://bluetooth-internals/#devices
+            // chrome://bluetooth-internals/#devices
             // MI Matric Display
             // EF:64:12:41:B0:A0
             // R8Hpj1WJAAeSNSsxWUrgeA==
@@ -97,12 +87,9 @@
             // Service #2
             // 0000af30-0000-1000-8000-00805f9b34fb
             // -----------------------------------
-
-
             using var navigator = JS.Get<Navigator>("navigator");
             using var bluetooth = navigator.Bluetooth;
             if (bluetooth == null) return;
-
             var options = new BluetoothDeviceOptions
             {
                 Filters = new BluetoothDeviceFilter[] {
@@ -115,7 +102,6 @@
             };
             // 
             device = await bluetooth!.RequestDevice(options);
-
             device.OnGATTServerDisconnected += Device_OnGATTServerDisconnected;
             bleState = $"Connected to device {device.Name}";
             bleServer = await device.GATT!.Connect();
@@ -235,20 +221,15 @@
     (byte r, byte g, byte b)[] GenerateRainbowPicture()
     {
         var ret = new (byte r, byte g, byte b)[256];
-
         var rMin = new Point(8, 0);
         var rMax = GetMaxDistance(rMin);
-
         var gMin = new Point(15, 15);
         var gMax = GetMaxDistance(gMin);
-
         var bMin = new Point(0, 15);
         var bMax = GetMaxDistance(bMin);
-
         var maxV = 255d;
         var gamma = 0.33d;
         var gammaCorrection = 1d / gamma;
-
         for (var y = 0; y < 16; y++)
         {
             for (var x = 0; x < 16; x++)
@@ -259,7 +240,6 @@
                 var g0 = (byte)(Normalize(Distance(gMin, gMax, p), gammaCorrection) * maxV);
                 var b0 = (byte)(Normalize(Distance(bMin, bMax, p), gammaCorrection) * maxV);
                 ret[i] = ((byte)r0, (byte)g0, (byte)b0);
-
             }
         }
         return ret;
@@ -273,11 +253,9 @@
         for (var blockIndex = 0; blockIndex < 8; blockIndex++)
         {
             var blockData = new byte[100];
-
             blockData[0] = 0xbc;
             blockData[1] = 0x0f;
             blockData[2] = (byte)((blockIndex + 1) & 0xff);
-
             for (var i = 0; i < 32; i++)
             {
                 var pixelIndex = blockIndex * 32 + i;
@@ -285,9 +263,7 @@
                 blockData[3 + i * 3 + 1] = imageData[pixelIndex].g; // Green
                 blockData[3 + i * 3 + 2] = imageData[pixelIndex].b; // Blue
             }
-
             blockData[99] = 0x55;
-
             Console.WriteLine($"Sending block {blockIndex + 1} / 8");
             await characteristic.WriteValueWithoutResponse(blockData);
             await Task.Delay(5);
