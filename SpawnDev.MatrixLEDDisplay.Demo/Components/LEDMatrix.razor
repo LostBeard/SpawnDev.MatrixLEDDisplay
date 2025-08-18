@@ -1,0 +1,86 @@
+﻿@using SpawnDev.BlazorJS
+@using SpawnDev.BlazorJS.JSObjects
+
+<div style="@Style">
+    <canvas style="border: 1px solid grey;" @ref=_canvasRef></canvas>
+</div>
+
+@code {
+    [Inject]
+    BlazorJSRuntime JS { get; set; } = default!;
+
+    [Parameter]
+    public string Style { get; set; } = "";
+
+    [Parameter]
+    public (byte r, byte g, byte b)[] Data { get; set; } = new (byte r, byte g, byte b)[256];
+
+    ElementReference _canvasRef;
+
+    HTMLCanvasElement? _canvas;
+    CanvasRenderingContext2D? _ctx;
+
+    int _blockSize = 0;
+    int _canvasSize = 320;
+    string _boxBorderColor = "black";
+
+    void DrawData()
+    {
+        for (var y = 0; y < 16; y++)
+        {
+            for (var x = 0; x < 16; x++)
+            {
+                var i = y * 16 + x;
+                var color = Data[i];
+                SetColor(x, y, color);
+            }
+        }
+    }
+    void SetColor(int x, int y, (byte r, byte g, byte b) color)
+    {
+        if (_ctx == null) return;
+        var i = y * 16 + x;
+        x = x * _blockSize;
+        y = y * _blockSize;
+        var x1 = x + _blockSize;
+        var y1 = y + _blockSize;
+        Data[i] = color;
+        var fillColor = Convert.ToHexString(new[] { color.r, color.g, color.b });
+        _ctx.FillStyle = $"#{fillColor}";
+        _ctx.FillRect(x, y, _blockSize, _blockSize);
+        var strokeColor = Convert.ToHexString(new byte[] { 0, 0, 0, 128 });
+        _ctx.StrokeStyle = $"#{strokeColor}";
+        _ctx.StrokeRect(x, y, _blockSize, _blockSize);
+    }
+    (byte r, byte g, byte b)[] CreatePicture()
+    {
+        var n = 1;
+        var ret = new (byte r, byte g, byte b)[256];
+        for (var y = 0; y < 16; y++)
+        {
+            for (var x = 0; x < 16; x++)
+            {
+                var r = x * 16;
+                var g = y * 16;
+                var b = n * 255;
+                var i = y * 16 + x;
+                ret[i] = ((byte)r, (byte)g, (byte)b);
+            }
+        }
+        return ret;
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _canvas = new HTMLCanvasElement(_canvasRef);
+            _ctx = _canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
+            _blockSize = (int)Math.Floor(_canvasSize / 16f);
+            _canvasSize = (int)(_blockSize * 16); // 16 blocks + 1 pixel border between each block
+            _canvas.Width = _canvasSize;
+            _canvas.Height = _canvasSize;
+            //Data = CreatePicture();
+        }
+        DrawData();
+    }
+}

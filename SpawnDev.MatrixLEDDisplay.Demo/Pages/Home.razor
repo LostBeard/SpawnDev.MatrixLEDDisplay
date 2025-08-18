@@ -1,51 +1,61 @@
 ﻿@page "/"
 @using SpawnDev.BlazorJS
 @using SpawnDev.BlazorJS.JSObjects
+@using SpawnDev.MatrixLEDDisplay.Demo.Components
 @implements IAsyncDisposable
 
 <PageTitle>Matrix LED Display Demo</PageTitle>
 
 <h1>Matrix LED Display Demo</h1>
 <div>
-    <img src="mi-matrix-display-400x334.png" />
+    <img src="mi-matrix-display-400x334.png" width="48" />
 </div>
-<button disabled="@(!isWebBluetoothEnabled || device != null)" @onclick=ConnectClick>Connect</button>
-<button disabled="@(device == null)" @onclick=DisconnectClick>Disconnect</button>
+<button disabled="@(!isWebBluetoothEnabled || DisplayService.Displays.Any())" @onclick=ConnectClick>Connect</button>
+<button disabled="@(!DisplayService.Displays.Any())" @onclick=DisconnectClick>Disconnect</button>
 <p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
-<button disabled="@(!connected)" @onclick=ConnectAndSendRainbow>Send Colors</button>
-<div>
-    <h2>Current Notification Value</h2>
-    <p><span>@retrievedValue</span></p>
-    <p>Last reading: <span>@timestamp</span></p>
-</div>
+<button disabled="@(!DisplayService.Displays.Any())" @onclick=ConnectAndSendRainbow>Send Colors</button>
+
+@foreach(var display in DisplayService.Displays)
+{
+    <div>
+        <div>@display.device?.Id</div>
+        <div>
+            <LEDMatrix Data="display.Data"></LEDMatrix>
+        </div>
+    </div>
+}
 
 @code
 {
     [Inject]
     BlazorJSRuntime JS { get; set; } = default!;
 
+    [Inject]
+    MatrixLEDDisplayService DisplayService { get; set; } = default!;
+
+    string bleState = "";
     bool isWebBluetoothEnabled = false;
-    string retrievedValue = "";
-    string timestamp = "";
-    string bleState = "Disconnected";
 
-    // Define BLE Device Specs
-    string deviceName = "MI Matrix Display";
-    string bleService = "0000ffd0-0000-1000-8000-00805f9b34fb";
-    string ledCharacteristicUUID = "0000ffd1-0000-1000-8000-00805f9b34fb";
-    string sensorCharacteristic = "0000ffd2-0000-1000-8000-00805f9b34fb";
-
-    // Global Variables to Handle Bluetooth
-    BluetoothDevice? device;
-    BluetoothRemoteGATTServer? bleServer;
-    BluetoothRemoteGATTService? bleServiceFound;
-    BluetoothRemoteGATTCharacteristic? sensorCharacteristicFound;
-    bool connected = false;
-
+    void Display_OnStateChanged(MIMatrixDisplay display)
+    {
+        StateHasChanged();
+    }
+    void DisplayAdded(MIMatrixDisplay display)
+    {
+        display.OnStateChanged += Display_OnStateChanged;
+        StateHasChanged();
+    }
+    void DisplayRemoved(MIMatrixDisplay display)
+    {
+        display.OnStateChanged -= Display_OnStateChanged;
+        StateHasChanged();
+    }
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
+            DisplayService.OnDisplayAdded += DisplayAdded;
+            DisplayService.OnDisplayRemoved += DisplayRemoved;
             using var navigator = JS.Get<Navigator>("navigator");
             using var bluetooth = navigator.Bluetooth;
             isWebBluetoothEnabled = bluetooth != null;
@@ -62,227 +72,144 @@
     }
     async Task ConnectClick()
     {
-        if (connected)
-        {
-            await DisconnectClick();
-        }
-        try
-        {
-            // chrome://bluetooth-internals/#devices
-            // MI Matric Display
-            // EF:64:12:41:B0:A0
-            // R8Hpj1WJAAeSNSsxWUrgeA==
-            // Services:
-            // Service #1 - Primary
-            // 0000ffd0-0000-1000-8000-00805f9b34fb
-            // Characteristics:
-            // - 0000ffd1-0000-1000-8000-00805f9b34fb
-            // - - Properties:
-            // - - - WriteWithoutResponse
-            // - 0000ffd2-0000-1000-8000-00805f9b34fb
-            // - - Properties:
-            // - - - Notify
-            // - - Descriptors:
-            // - - - 00002902-0000-1000-8000-00805f9b34fb
-            // Service #2
-            // 0000af30-0000-1000-8000-00805f9b34fb
-            // -----------------------------------
-            using var navigator = JS.Get<Navigator>("navigator");
-            using var bluetooth = navigator.Bluetooth;
-            if (bluetooth == null) return;
-            var options = new BluetoothDeviceOptions
-            {
-                Filters = new BluetoothDeviceFilter[] {
-                    new BluetoothDeviceFilter
-                    {
-                        Name  = "MI Matrix Display",
-                    },
-                },
-                OptionalServices = new[] { bleService }
-            };
-            // 
-            device = await bluetooth!.RequestDevice(options);
-            device.OnGATTServerDisconnected += Device_OnGATTServerDisconnected;
-            bleState = $"Connected to device {device.Name}";
-            bleServer = await device.GATT!.Connect();
-            bleServiceFound = await bleServer.GetPrimaryService(bleService);
-            sensorCharacteristicFound = await bleServiceFound.GetCharacteristic(sensorCharacteristic);
-            sensorCharacteristicFound.OnCharacteristicValueChanged += SensorCharacteristicFound_OnCharacteristicValueChanged;
-            await sensorCharacteristicFound.StartNotifications();
-            connected = true;
-            timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-        }
-        catch (Exception ex)
-        {
-            bleState = "Connect failed:" + ex.Message;
-        }
-    }
-    void SensorCharacteristicFound_OnCharacteristicValueChanged(Event e)
-    {
-        //using var characteristic = e.TargetAs<BluetoothRemoteGATTCharacteristic>();
-        //using var value = characteristic.Value;
-        //retrievedValue = textDecoder!.Decode(value.Buffer);
-        timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-        StateHasChanged();
-    }
-    async void Device_OnGATTServerDisconnected(Event e)
-    {
-        if (connected)
-        {
-            await DisconnectClick();
-        }
-        StateHasChanged();
+        await DisplayService.ConnectDisplay();
     }
     async Task DisconnectClick()
     {
-        if (!connected) return;
-        connected = false;
-        bleState = "Disconnected";
-        if (sensorCharacteristicFound != null)
-        {
-            sensorCharacteristicFound.OnCharacteristicValueChanged -= SensorCharacteristicFound_OnCharacteristicValueChanged;
-            if (bleServer?.Connected == true)
-            {
-                await sensorCharacteristicFound.StopNotifications();
-            }
-            sensorCharacteristicFound.Dispose();
-            sensorCharacteristicFound = null;
-        }
-        if (bleServiceFound != null)
-        {
-            bleServiceFound.Dispose();
-            bleServiceFound = null;
-        }
-        if (bleServer != null)
-        {
-            if (bleServer.Connected)
-            {
-                // this will cause Device_OnGATTServerDisconnected to fire.
-                bleServer.Disconnect();
-            }
-            bleServer.Dispose();
-            bleServer = null;
-        }
-        if (device != null)
-        {
-            device.OnGATTServerDisconnected -= Device_OnGATTServerDisconnected;
-            device.Dispose();
-            device = null;
-        }
+        DisplayService.RemoveAllDisplays();
     }
-    (byte r, byte g, byte b)[] CreatePicture(byte n)
-    {
-        var ret = new (byte r, byte g, byte b)[256];
-        for (var y = 0; y < 16; y++)
-        {
-            for (var x = 0; x < 16; x++)
-            {
-                var r = x * 16;
-                var g = y * 16;
-                var b = n * 255;
-                var i = y * 16 + x;
-                ret[i] = ((byte)r, (byte)g, (byte)b);
-            }
-        }
-        return ret;
-    }
-    struct Point
-    {
-        public double X;
-        public double Y;
-        public Point() { }
-        public Point(double x, double y)
-        {
-            X = x;
-            Y = y;
-        }
-    }
-    static double Distance(double x1, double y1, double x2, double y2) => Math.Sqrt(Math.Pow((x2 - x1), 2) + Math.Pow((y2 - y1), 2));
-    static double Distance(Point p1, Point p2) => Distance(p1.X, p1.Y, p2.X, p2.Y);
-    static double Distance(Point p1, double dMax, Point p)
-    {
-        var d1 = Distance(p1, p);
-        var value = d1 / dMax;
-        return value;
-    }
-    static double GetMaxDistance(Point pMin)
-    {
-        var ret = 0d;
-        for (var y = 0; y < 16; y++)
-        {
-            for (var x = 0; x < 16; x++)
-            {
-                var d = Distance(pMin, new Point(x, y));
-                ret = Math.Max(d, ret);
-            }
-        }
-        return ret;
-    }
-    (byte r, byte g, byte b)[] GenerateRainbowPicture()
-    {
-        var ret = new (byte r, byte g, byte b)[256];
-        var rMin = new Point(8, 0);
-        var rMax = GetMaxDistance(rMin);
-        var gMin = new Point(15, 15);
-        var gMax = GetMaxDistance(gMin);
-        var bMin = new Point(0, 15);
-        var bMax = GetMaxDistance(bMin);
-        var maxV = 255d;
-        var gamma = 0.33d;
-        var gammaCorrection = 1d / gamma;
-        for (var y = 0; y < 16; y++)
-        {
-            for (var x = 0; x < 16; x++)
-            {
-                var i = y * 16 + x;
-                var p = new Point(x, y);
-                var r0 = (byte)(Normalize(Distance(rMin, rMax, p), gammaCorrection) * maxV);
-                var g0 = (byte)(Normalize(Distance(gMin, gMax, p), gammaCorrection) * maxV);
-                var b0 = (byte)(Normalize(Distance(bMin, bMax, p), gammaCorrection) * maxV);
-                ret[i] = ((byte)r0, (byte)g0, (byte)b0);
-            }
-        }
-        return ret;
-    }
-    double Normalize(double v, double gammaCorrection)
-    {
-        return Math.Pow(v, gammaCorrection);
-    }
-    async Task SendPicture(BluetoothRemoteGATTCharacteristic characteristic, (byte r, byte g, byte b)[] imageData)
-    {
-        for (var blockIndex = 0; blockIndex < 8; blockIndex++)
-        {
-            var blockData = new byte[100];
-            blockData[0] = 0xbc;
-            blockData[1] = 0x0f;
-            blockData[2] = (byte)((blockIndex + 1) & 0xff);
-            for (var i = 0; i < 32; i++)
-            {
-                var pixelIndex = blockIndex * 32 + i;
-                blockData[3 + i * 3] = imageData[pixelIndex].r; // Red
-                blockData[3 + i * 3 + 1] = imageData[pixelIndex].g; // Green
-                blockData[3 + i * 3 + 2] = imageData[pixelIndex].b; // Blue
-            }
-            blockData[99] = 0x55;
-            Console.WriteLine($"Sending block {blockIndex + 1} / 8");
-            await characteristic.WriteValueWithoutResponse(blockData);
-            await Task.Delay(5);
-        }
-    }
+    // (byte r, byte g, byte b)[] CreatePicture(byte n)
+    // {
+    //     var ret = new (byte r, byte g, byte b)[256];
+    //     for (var y = 0; y < 16; y++)
+    //     {
+    //         for (var x = 0; x < 16; x++)
+    //         {
+    //             var r = x * 16;
+    //             var g = y * 16;
+    //             var b = n * 255;
+    //             var i = y * 16 + x;
+    //             ret[i] = ((byte)r, (byte)g, (byte)b);
+    //         }
+    //     }
+    //     return ret;
+    // }
+    // struct Point
+    // {
+    //     public double X;
+    //     public double Y;
+    //     public Point() { }
+    //     public Point(double x, double y)
+    //     {
+    //         X = x;
+    //         Y = y;
+    //     }
+    // }
+    // static double Distance(double x1, double y1, double x2, double y2) => Math.Sqrt(Math.Pow((x2 - x1), 2) + Math.Pow((y2 - y1), 2));
+    // static double Distance(Point p1, Point p2) => Distance(p1.X, p1.Y, p2.X, p2.Y);
+    // static double Distance(Point p1, double dMax, Point p)
+    // {
+    //     var d1 = Distance(p1, p);
+    //     var value = d1 / dMax;
+    //     return value;
+    // }
+    // static double GetMaxDistance(Point pMin)
+    // {
+    //     var ret = 0d;
+    //     for (var y = 0; y < 16; y++)
+    //     {
+    //         for (var x = 0; x < 16; x++)
+    //         {
+    //             var d = Distance(pMin, new Point(x, y));
+    //             ret = Math.Max(d, ret);
+    //         }
+    //     }
+    //     return ret;
+    // }
+    // (byte r, byte g, byte b)[] GenerateRainbowPicture(double gamma = 1.0)
+    // {
+    //     var ret = new (byte r, byte g, byte b)[256];
+    //     var rMin = new Point(8, 0);
+    //     var rMax = GetMaxDistance(rMin);
+    //     var gMin = new Point(15, 15);
+    //     var gMax = GetMaxDistance(gMin);
+    //     var bMin = new Point(0, 15);
+    //     var bMax = GetMaxDistance(bMin);
+    //     var maxV = 255d;
+    //     var gamma = 0.33d;
+    //     var gammaCorrection = 1d / gamma;
+    //     for (var y = 0; y < 16; y++)
+    //     {
+    //         for (var x = 0; x < 16; x++)
+    //         {
+    //             var i = y * 16 + x;
+    //             var p = new Point(x, y);
+    //             var r0 = (byte)(Normalize(Distance(rMin, rMax, p), gammaCorrection) * maxV);
+    //             var g0 = (byte)(Normalize(Distance(gMin, gMax, p), gammaCorrection) * maxV);
+    //             var b0 = (byte)(Normalize(Distance(bMin, bMax, p), gammaCorrection) * maxV);
+    //             ret[i] = ((byte)r0, (byte)g0, (byte)b0);
+    //         }
+    //     }
+    //     return ret;
+    // }
+    // double Normalize(double v, double gammaCorrection)
+    // {
+    //     return Math.Pow(v, gammaCorrection);
+    // }
+    // (byte r, byte g, byte b)[] _data = new (byte r, byte g, byte b)[256];
+    // async Task SendPicture(BluetoothRemoteGATTCharacteristic characteristic, (byte r, byte g, byte b)[] imageData, (byte r, byte g, byte b)[] imageData2)
+    // {
+    //     for (var blockIndex = 0; blockIndex < 8; blockIndex++)
+    //     {
+    //         var blockData = new byte[100];
+    //         blockData[0] = 0xbc;
+    //         blockData[1] = 0x0f;
+    //         blockData[2] = (byte)((blockIndex + 1) & 0xff);
+    //         for (var i = 0; i < 32; i++)
+    //         {
+    //             var pixelIndex = blockIndex * 32 + i;
+    //             blockData[3 + i * 3] = imageData[pixelIndex].r; Red
+    //             blockData[3 + i * 3 + 1] = imageData[pixelIndex].g; Green
+    //             blockData[3 + i * 3 + 2] = imageData[pixelIndex].b; Blue
+    //         }
+    //         blockData[99] = 0x55;
+    //         Console.WriteLine($"Sending block {blockIndex + 1} / 8");
+    //         await characteristic.WriteValueWithoutResponse(blockData);
+    //         await Task.Delay(5);
+    //     }
+    //     _data = imageData2;
+    //     StateHasChanged();
+    // }
+    // double _canvasGamma = 0.66d;
+    // double _matrixDisplayGamm = 0.33d;
     async Task ConnectAndSendRainbow()
     {
-        if (bleServer != null && bleServer.Connected && bleServiceFound != null)
+
+        var display = DisplayService.Displays.FirstOrDefault();
+        if (display == null)
         {
-            using var characteristic = await bleServiceFound.GetCharacteristic(ledCharacteristicUUID);
-            var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
-            await characteristic.WriteValueWithoutResponse(initCommand);
-            await Task.Delay(2);
-            //
-            var imageData = GenerateRainbowPicture();
-            await SendPicture(characteristic, imageData);
-            //
-            StateHasChanged();
+            display = await DisplayService.ConnectDisplay();
         }
+        if (display == null)
+        {
+            return;
+        }
+        await display.SendTestPicture();
+        // if (bleServer != null && bleServer.Connected && bleServiceFound != null)
+        // {
+        //     using var characteristic = await bleServiceFound.GetCharacteristic(ledCharacteristicUUID);
+        //     var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
+        //     await characteristic.WriteValueWithoutResponse(initCommand);
+        //     await Task.Delay(2);
+
+        //     var iamgeData = cre
+            
+        //     var imageDataGammaCorrected = GenerateRainbowPicture(0.33d);
+        //     var imageData = GenerateRainbowPicture(0.66d);
+        //     await SendPicture(characteristic, imageDataGammaCorrected, imageData);
+            
+        //     StateHasChanged();
+        // }
     }
     public async ValueTask DisposeAsync()
     {

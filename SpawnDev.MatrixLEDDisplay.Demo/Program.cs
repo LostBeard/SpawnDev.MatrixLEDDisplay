@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using SpawnDev.BlazorJS;
+using SpawnDev.MatrixLEDDisplay;
 using SpawnDev.MatrixLEDDisplay.Demo;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddBlazorJSRuntime(out var JS);
+builder.Services.AddSingleton<MatrixLEDDisplayService>();
 
 if (JS.IsWindow)
 {
