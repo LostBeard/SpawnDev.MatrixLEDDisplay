@@ -9,20 +9,17 @@ Blazor WebAssembly code and demo app for communicating with the "Matrix LED Disp
 This neat 160mm (6.3 inch) square USB powered display features a 16x16 multi-color LED grid
 and can be found at places like Walmart [here](https://www.walmart.com/ip/Merkury-Innovations-Bluetooth-Matrix-LED-Pixel-Display/5150283693) for about $20. 
 
-
 ## The problem
-The instructions that come with this display tells the user to install anapp on their phone named "MI Matrix Display"... 
-but there is no app with that name in the iOS App Store or the Android Play Store. There is an app named an 
+The instructions that come with this display tells the user to install an app on their phone named "MI Matrix Display"... 
+but there is no app with that name in the iOS App Store or the Android Play Store. There are apps 
 Android phone app [MatrixPanel Plus](https://play.google.com/store/apps/details?id=com.wzjledaxc.ledplus),
 and an iPhone app [Matrix Panel Plus](https://apps.apple.com/us/app/matrix-panel-plus/id6743264417)
-that claims to be the new version of the official app but the publisher is a one-off publisher named "Chrisamy" not the display maker "Merkury Innovations". Merkury Innovations website doesn't list this display.
+that claim to be the new version of the official app but the publisher is a one-off publisher named "Chrisamy" not the display maker "Merkury Innovations". Merkury Innovations website doesn't list this display.
 
 I tried "MatrixPanel Plus" on 2 Android phones and the app didn't see or connect to the display on either one. The problem appears to be the app itself because my old Moto E running Android 10 was able to connect to and control the MI Matrix Display using Google Chrome and this demo.
 The app must work on some devices though, as the GitHub repo I found with a lot of Bluetooth protocol work for this display apparently used that app. Reference: [offe/mi-led-display/snoops/README.md](https://github.com/offe/mi-led-display/blob/main/snoops/README.md)
 
 This YouTube [reviewer](https://www.youtube.com/watch?v=QN0TxJoeTNk) had the same issue.
-
-The problem is, BLE does not work with some (a lot?) of phones, preventing the company's app from controlling the display.
 
 So if you bought one of these cool displays and want an alternative to the default app, this library and demo app app can help you do that.
 
