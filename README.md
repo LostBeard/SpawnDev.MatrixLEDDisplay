@@ -33,17 +33,15 @@ So if you bought one of these cool displays and want an alternative to the defau
 Created 2025-08-17. Current version allows connecting to the display and drawing a spread of colors.
 
 ## Nerd stuff
-chrome://bluetooth-internals/#devices  
-Device Name:  
-MI Matric Display   
+From [Chrome Bluetooth Devices](chrome://bluetooth-internals/#devices)
+Device Name: MI Matric Display   
 Services:  
-0000ffd0-0000-1000-8000-00805f9b34fb - Primary  
-- 0000ffd1-0000-1000-8000-00805f9b34fb - WriteWithoutResponse  
-- 0000ffd2-0000-1000-8000-00805f9b34fb - Notify  
--- Descriptors:  
---- 00002902-0000-1000-8000-00805f9b34fb  
-Service #2  
-0000af30-0000-1000-8000-00805f9b34fb  
+- 0000ffd0-0000-1000-8000-00805f9b34fb - Primary  
+  - 0000ffd1-0000-1000-8000-00805f9b34fb - WriteWithoutResponse  
+  - 0000ffd2-0000-1000-8000-00805f9b34fb - Notify  
+    - Descriptors:  
+      - 00002902-0000-1000-8000-00805f9b34fb  
+- 0000af30-0000-1000-8000-00805f9b34fb 
 
 ### Todo
 - Add library methods for common tasks.
