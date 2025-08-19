@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "SpawnDev.MatrixLEDDisplay.Demo",
   "resources": {
-    "hash": "sha256-DE6Ec4EtGUZ0SmnTeNA1bgBVljMNWkj+NrzPhXKbTGc=",
+    "hash": "sha256-dwhk0nEPN4+xnQudi6rlXHb9l70MxfZGnR2jA3PSMC0=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-ixjJf7/pJstKcKFVMJf+0943EgzAnPUSAdsrLh50MFU="
     },
@@ -9,7 +9,7 @@
       "dotnet.runtime.js": "sha256-91CDXCvYTrWqTidtPWAY6j9w/EQtJKjSj9VneQwl020="
     },
     "wasmNative": {
-      "dotnet.native.wasm": "sha256-7zBVkIoyBv+EGMb11JScTBYxi0EMndx9aH9465xMF9U="
+      "dotnet.native.wasm": "sha256-9OiK/IiBZKkXoqLurBwH4nKQQ9zQ26cfHG39XFnnGds="
     },
     "icu": {
       "icudt_CJK.dat": "sha256-SZLtQnRc0JkwqHab0VUVP7T3uBPSeYzxzDnpxPpUnHk=",
@@ -18,7 +18,7 @@
     },
     "coreAssembly": {},
     "assembly": {
-      "Microsoft.AspNetCore.Components.wasm": "sha256-fu2oza6VQJvLux/cgxl4KR13sKfyKWwbDAg4AYC5EWA=",
+      "Microsoft.AspNetCore.Components.wasm": "sha256-szoLS48XerAhSW5C1sT8wGXs7id8FuEG4NXVj6iZRDM=",
       "Microsoft.AspNetCore.Components.Web.wasm": "sha256-mYd5ZGAfr8B53DB6hg2XbJBOuKOegy6TcYFLXs214Ig=",
       "Microsoft.AspNetCore.Components.WebAssembly.wasm": "sha256-x1F82njgsF9dzQZyrJ0ztCzBd2r766MNbpIjisdGtB0=",
       "Microsoft.Extensions.Configuration.wasm": "sha256-od574rRtVVRJj+24jbl8j3GdQFpxlJOpSx+pEMw1Q18=",
@@ -55,9 +55,9 @@
       "System.Text.Json.wasm": "sha256-DDDPuPOBI3sYe0jqRSqVY9Y1FV5EPXia2X0a4aHYRmc=",
       "System.Text.RegularExpressions.wasm": "sha256-VshriaVaFr33p9yqm1Pih3NfRa8itj23K2HrfeWFIGA=",
       "System.Threading.wasm": "sha256-6r75HNYn94aq1XKrlUCGk0t1f2/OxQTd3T/Oa3OHvuE=",
-      "System.Private.CoreLib.wasm": "sha256-PNjFbT9Rk2+UmnO1T7KnMeVfYLqBfjYhrMfHq0jc7Tk=",
-      "SpawnDev.MatrixLEDDisplay.wasm": "sha256-N0dTxnQ58/vkmsUOEPPhcx9Dke6PoB/rej2hzYzlbxE=",
-      "SpawnDev.MatrixLEDDisplay.Demo.wasm": "sha256-Y+Gu2KCfmEljrhqVGJdTLVvWrnAfDRkHC4zyZFJxv/s="
+      "System.Private.CoreLib.wasm": "sha256-WmxUiDGzB2B38NSuW5ghJTxYaZedTrmPlhi0AxxJwVk=",
+      "SpawnDev.MatrixLEDDisplay.wasm": "sha256-KRUCJ/KDrfJLUx+WCbcABK2QojlStjG4ixWkNIJfOm0=",
+      "SpawnDev.MatrixLEDDisplay.Demo.wasm": "sha256-e0Cv59wCEfCM9HluVHcuuK3LcDc1+euzQWB/kiUhPeo="
     },
     "libraryInitializers": {
       "SpawnDev.BlazorJS.lib.module.js": "sha256-He/MmXng7zf8Jyezvvf4fudQYyVkjhf7DodMUnMOSqc="
