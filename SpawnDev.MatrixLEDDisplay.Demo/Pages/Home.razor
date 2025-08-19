@@ -24,16 +24,17 @@
         <div>Name: @display.DeviceName</div>
         <div>Id: @display.DeviceHexId</div>
         <div>
-            <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Load Test Image</button>
+            <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Load Pattern</button>
+            <button disabled="@(!display.Connected)" @onclick=@(() => LoadPenguinImage(display))>Load Test Image</button>
             <button disabled="@(!display.Connected)" @onclick=display.SelectAndLoadImage>Load Image File</button>
             <button @onclick=@(() => DisplayService.RemoveDisplay(display))>Remove</button>
         </div>
         <div title="Matrix display gamma correction">
-            <label for="gamma">Gamma: @(Math.Round(display.Gamma, 2))</label>
+            <label for="gamma">Gamma: @(Math.Round(display.Gamma, 2))</label><br />
             <UISlider Name="gamma" Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)" />
         </div>
         <div title="Used with images that have transparency">
-            <label for="background_color">Background Color:</label>
+            <label for="background_color">Background Color: @display.BackgroundColorHex</label><br />
             <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColorHex">
         </div>
         <div>
@@ -72,6 +73,10 @@
     {
         display.OnStateChanged -= Display_OnStateChanged;
         StateHasChanged();
+    }
+    async Task LoadPenguinImage(MIMatrixDisplay display)
+    {
+        await display.LoadImageFromURL("pixelart/penguin_16.png");
     }
     protected override void OnAfterRender(bool firstRender)
     {

@@ -1,9 +1,25 @@
 ﻿using SpawnDev.BlazorJS;
 using SpawnDev.BlazorJS.JSObjects;
 using SpawnDev.BlazorJS.Toolbox;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SpawnDev.MatrixLEDDisplay
 {
+    public class ColorRGBA
+    {
+        public byte r;
+        public byte g;
+        public byte b;
+        public byte a;
+        public string ToHex() => $"#{Convert.ToHexString(new[] { r, g, b, a })}";
+    }
+    public class ColorRGB
+    {
+        public byte r;
+        public byte g;
+        public byte b;
+        public string ToHex() => $"#{Convert.ToHexString(new[] { r, g, b })}";
+    }
     /// <summary>
     /// Connects to and controls a Merkury Innovations MI Matrix Display 16x16 LED panel using BLE
     /// </summary>
@@ -24,7 +40,7 @@ namespace SpawnDev.MatrixLEDDisplay
                 _ = SendPicture();
             }
         }
-        (byte r, byte g, byte b) _backgroundColor = (128, 128, 128);
+        (byte r, byte g, byte b) _backgroundColor = (194, 136, 36);
         /// <summary>
         /// This color will be used as the background color for images with transparency.
         /// </summary>
@@ -126,7 +142,7 @@ namespace SpawnDev.MatrixLEDDisplay
         /// </summary>
         /// <param name="n"></param>
         /// <returns></returns>
-        public (byte r, byte g, byte b,  byte a)[] CreateTestPicture(byte n = 1)
+        public (byte r, byte g, byte b, byte a)[] CreateTestPicture(byte n = 1)
         {
             var ret = new (byte r, byte g, byte b, byte a)[256];
             for (var y = 0; y < 16; y++)
@@ -156,20 +172,24 @@ namespace SpawnDev.MatrixLEDDisplay
                 var imageDataUrl = await FileReader.ReadAsDataURLAsync(file);
                 if (string.IsNullOrEmpty(imageDataUrl)) return;
                 using var image = await HTMLImageElement.CreateFromImageAsync(imageDataUrl);
-                using var canvas = new OffscreenCanvas(16, 16);
-                using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
-                ctx.DrawImage(image, 0, 0, 16, 16);
-                var imageDataBytes = ctx.GetImageBytes()!;
-                //
-                var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
-                await LEDCharacteristic.WriteValueWithoutResponse(initCommand);
-                await Task.Delay(2);
-                //
-                await SendPictureRGBA(imageDataBytes);
+                await SendPicture(image);
             }
         }
         /// <summary>
-        /// Sends a simple test image to the display
+        /// Opens a file picker to select an image that will be loaded onto the display.
+        /// </summary>
+        /// <returns></returns>
+        public async Task LoadImageFromURL(string url)
+        {
+            if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
+            {
+                if (string.IsNullOrEmpty(url)) return;
+                using var image = await HTMLImageElement.CreateFromImageAsync(url);
+                await SendPicture(image);
+            }
+        }
+        /// <summary>
+        /// Sends a simple test picture to the display
         /// </summary>
         /// <returns></returns>
         public async Task SendTestPicture()
@@ -359,6 +379,74 @@ namespace SpawnDev.MatrixLEDDisplay
             var gc = Math.Pow(s, gammaCorrection);
             return (byte)(gc * 255d);
         }
+        public async Task SendPicture(HTMLImageElement image)
+        {
+            if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
+            {
+                using var canvas = new OffscreenCanvas(16, 16);
+                using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
+                var biggestSide = Math.Max(image.NaturalWidth, image.NaturalHeight);
+                if (biggestSide <= 16)
+                {
+                    // center
+                    var x = (int)Math.Round((16 - image.NaturalWidth) / 2d);
+                    var y = (int)Math.Round((16 - image.NaturalHeight) / 2d);
+                    ctx.DrawImage(image, x, y, image.NaturalWidth, image.NaturalHeight);
+                }
+                else
+                {
+                    // scale down and center
+                    var scale = 16f / (float)biggestSide;
+                    var scaleWidth = (int)(image.NaturalWidth * scale);
+                    var scaleHeight = (int)(image.NaturalHeight * scale);
+                    var x = (int)Math.Round((16 - scaleWidth) / 2d);
+                    var y = (int)Math.Round((16 - scaleHeight) / 2d);
+                    ctx.DrawImage(image, x, y, scaleWidth, scaleHeight);
+                }
+                var imageDataBytes = ctx.GetImageBytes()!;
+                //
+                var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
+                await LEDCharacteristic.WriteValueWithoutResponse(initCommand);
+                await Task.Delay(2);
+                //
+                await SendPictureRGBA(imageDataBytes);
+            }
+        }
+        public async Task SendPicture(OffscreenCanvas image)
+        {
+            if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
+            {
+                var width = image.Width;
+                var height = image.Height;
+                using var canvas = new OffscreenCanvas(16, 16);
+                using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
+                var biggestSide = Math.Max(width, height);
+                if (biggestSide <= 16)
+                {
+                    // center
+                    var x = (int)Math.Round((16 - width) / 2d);
+                    var y = (int)Math.Round((16 - height) / 2d);
+                    ctx.DrawImage(image, x, y, width, height);
+                }
+                else
+                {
+                    // scale down and center
+                    var scale = 16f / (float)biggestSide;
+                    var scaleWidth = (int)(width * scale);
+                    var scaleHeight = (int)(height * scale);
+                    var x = (int)Math.Round((16 - scaleWidth) / 2d);
+                    var y = (int)Math.Round((16 - scaleHeight) / 2d);
+                    ctx.DrawImage(image, x, y, scaleWidth, scaleHeight);
+                }
+                var imageDataBytes = ctx.GetImageBytes()!;
+                //
+                var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
+                await LEDCharacteristic.WriteValueWithoutResponse(initCommand);
+                await Task.Delay(2);
+                //
+                await SendPictureRGBA(imageDataBytes);
+            }
+        }
         /// <summary>
         /// Sends a 16x16 RGB image to the display.
         /// </summary>
@@ -376,6 +464,8 @@ namespace SpawnDev.MatrixLEDDisplay
         public async Task<bool> SendPicture((byte r, byte g, byte b, byte a)[] imageData)
         {
             if (LEDCharacteristic == null) return false;
+            Data = imageData;
+            // process transparency
             for (var i = 0; i < imageData.Length; i++)
             {
                 var srcPixel = imageData[i];
@@ -391,6 +481,7 @@ namespace SpawnDev.MatrixLEDDisplay
                 }
                 DrawnData[i] = (r, g, b);
             }
+            // process gamma and send
             try
             {
                 var gammaCorrection = 1d / Gamma;
@@ -403,27 +494,18 @@ namespace SpawnDev.MatrixLEDDisplay
                     for (var i = 0; i < 32; i++)
                     {
                         var pixelIndex = blockIndex * 32 + i;
-                        var srcPixel = imageData[pixelIndex];
+                        var srcPixel = DrawnData[pixelIndex];
                         var r = srcPixel.r;
                         var g = srcPixel.g;
                         var b = srcPixel.b;
-                        if (srcPixel.a < 255)
-                        {
-                            var an = (double)srcPixel.a / 255d;
-                            r = (byte)double.Lerp(BackgroundColor.r, r, an);
-                            g = (byte)double.Lerp(BackgroundColor.g, g, an);
-                            b = (byte)double.Lerp(BackgroundColor.b, b, an);
-                        }
                         blockData[3 + i * 3] = GammaCorrect(r, gammaCorrection);     // Red
                         blockData[3 + i * 3 + 1] = GammaCorrect(g, gammaCorrection); // Green
                         blockData[3 + i * 3 + 2] = GammaCorrect(b, gammaCorrection); // Blue
                     }
                     blockData[99] = 0x55;
-                    Console.WriteLine($"Sending block {blockIndex + 1} / 8");
                     await LEDCharacteristic.WriteValueWithoutResponse(blockData);
                     await Task.Delay(5);
                 }
-                Data = imageData;
                 StateHasChanged();
                 return true;
             }

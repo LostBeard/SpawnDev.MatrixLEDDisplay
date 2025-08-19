@@ -2,6 +2,7 @@
 Blazor WebAssembly code and demo app for communicating with the "Matrix LED Display" by Merkury Innovations, aka "MI Matrix Display". 
 
 [Demo Web App](https://lostbeard.github.io/SpawnDev.MatrixLEDDisplay/)
+- Image loading. Reverts on disconnect.
 
 ![Matrix LED Display](https://raw.githubusercontent.com/LostBeard/SpawnDev.MatrixLEDDisplay/master/SpawnDev.MatrixLEDDisplay.Demo/wwwroot/mi-matrix-display-400x334.png)
 
@@ -28,5 +29,4 @@ Created 2025-08-17. Current version allows connecting to the display and drawing
 - Add library methods for common tasks.
 - Live drawing canvas
 - Animated images
-- Simple image upload
 - Generative AI images
