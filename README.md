@@ -2,7 +2,6 @@
 Blazor WebAssembly code and demo app for communicating with the "Matrix LED Display" by Merkury Innovations, aka "MI Matrix Display". 
 
 [Demo Web App](https://lostbeard.github.io/SpawnDev.MatrixLEDDisplay/)
-- Image loading. Reverts on disconnect.
 
 ![Matrix LED Display](https://raw.githubusercontent.com/LostBeard/SpawnDev.MatrixLEDDisplay/master/SpawnDev.MatrixLEDDisplay.Demo/wwwroot/mi-matrix-display-400x334.png)
 
