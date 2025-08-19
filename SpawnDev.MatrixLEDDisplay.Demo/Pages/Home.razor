@@ -2,6 +2,7 @@
 @using SpawnDev.BlazorJS
 @using SpawnDev.BlazorJS.JSObjects
 @using SpawnDev.MatrixLEDDisplay.Demo.Components
+@using SpawnDev.MatrixLEDDisplay.UI
 @implements IAsyncDisposable
 
 <PageTitle>Matrix LED Display Demo</PageTitle>
@@ -13,30 +14,41 @@
 <button disabled="@(!isWebBluetoothEnabled || _connecting)" @onclick=ConnectClick>Connect</button>
 <p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
 <div>
-    Images will be scaled to 16x16. 16x16 pixel art is recommended. Device will revert upon disconnect.
+    Images will be scaled to 16x16. 16x16 pixel art is recommended.
+    The device will revert upon disconnect.
 </div>
 
 @foreach (var display in DisplayService.Displays)
 {
     <div>
-        <div>Name: @display.device?.Name</div>
+        <div>Name: @display.BLEDevice?.Name</div>
         <div>
             <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Load Test Image</button>
             <button disabled="@(!display.Connected)" @onclick=display.SelectAndLoadImage>Load Image File</button>
             <button @onclick=@(() => DisplayService.RemoveDisplay(display))>Remove</button>
         </div>
-        <div>
-            Gamma:<br/>
-            <SpawnDev.MatrixLEDDisplay.UI.UISlider Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)"></SpawnDev.MatrixLEDDisplay.UI.UISlider>
+        <div title="Matrix display gamma correction">
+            <label for="gamma">Gamma: @(Math.Round(display.Gamma, 2))</label>
+            <UISlider Name="gamma" Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)" />
+        </div>
+        <div title="Used with images that have transparency">
+            <label for="background_color">Background Color:</label>
+            <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColorHex">
         </div>
         <div>
-            <LEDMatrix Data="display.Data"></LEDMatrix>
+            <LEDMatrix Data="display.DrawnData"></LEDMatrix>
         </div>
     </div>
 }
 
 @code
 {
+
+    void ColorPicker(ChangeEventArgs args, MIMatrixDisplay display)
+    {
+        var newColor = args.Value as string;
+        display.BackgroundColorHex = newColor!;
+    }
     [Inject]
     BlazorJSRuntime JS { get; set; } = default!;
 

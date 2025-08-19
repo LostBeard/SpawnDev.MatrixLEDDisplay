@@ -16,4 +16,8 @@
 		<ProjectReference Include="..\SpawnDev.MatrixLEDDisplay\SpawnDev.MatrixLEDDisplay.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="wwwroot\pixelart\" />
+	</ItemGroup>
+
 </Project>

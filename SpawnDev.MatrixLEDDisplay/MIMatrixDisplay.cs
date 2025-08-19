@@ -4,76 +4,16 @@ using SpawnDev.BlazorJS.Toolbox;
 
 namespace SpawnDev.MatrixLEDDisplay
 {
+    /// <summary>
+    /// Connects to and controls a Merkury Innovations MI Matrix Display 16x16 LED panel using BLE
+    /// </summary>
     public class MIMatrixDisplay : IDisposable
     {
         BlazorJSRuntime JS;
-
-        public string DeviceId
-        {
-            get
-            {
-                var t = device?.Id;
-                var bytes = Convert.FromBase64String(t);
-                var ret = Convert.ToHexString(bytes);
-                return ret;
-            }
-        }
-
-        // Define BLE Device Specs
-        string deviceName = "MI Matrix Display";
-        string bleService = "0000ffd0-0000-1000-8000-00805f9b34fb";
-        string ledCharacteristicUUID = "0000ffd1-0000-1000-8000-00805f9b34fb";
-        string sensorCharacteristic = "0000ffd2-0000-1000-8000-00805f9b34fb";
-
-        // Global Variables to Handle Bluetooth
-        public BluetoothDevice? device { get; private set; }
-        public BluetoothRemoteGATTServer? bleServer { get; private set; }
-        public BluetoothRemoteGATTService? bleServiceFound { get; private set; }
-        public BluetoothRemoteGATTCharacteristic? sensorCharacteristicFound { get; private set; }
-        public BluetoothRemoteGATTCharacteristic? characteristic { get; private set; }
-        public bool Connected { get; private set; } = false;
-        public MIMatrixDisplay(BlazorJSRuntime js)
-        {
-            JS = js;
-        }
-        public (byte r, byte g, byte b)[] CreateTestPicture(byte n)
-        {
-            var ret = new (byte r, byte g, byte b)[256];
-            for (var y = 0; y < 16; y++)
-            {
-                for (var x = 0; x < 16; x++)
-                {
-                    var r = x * 16;
-                    var g = y * 16;
-                    var b = n * 255;
-                    var i = y * 16 + x;
-                    ret[i] = ((byte)r, (byte)g, (byte)b);
-                }
-            }
-            return ret;
-        }
-        public async Task SelectAndLoadImage()
-        {
-            if (bleServer != null && bleServer.Connected && bleServiceFound != null && characteristic != null)
-            {
-                var files = await FilePicker.ShowOpenFilePicker("", false);
-                if (files == null || files.Length == 0) return;
-                var file = files[0];
-                var imageDataUrl = await FileReader.ReadAsDataURLAsync(file);
-                using var image = await HTMLImageElement.CreateFromImageAsync(imageDataUrl);
-                using var canvas = new OffscreenCanvas(16, 16);
-                using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
-                ctx.DrawImage(image, 0, 0, 16, 16);
-                var imageDataBytes = ctx.GetImageBytes()!;
-
-                var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
-                await characteristic.WriteValueWithoutResponse(initCommand);
-                await Task.Delay(2);
-                //
-                await SendPicture(imageDataBytes);
-            }
-        }
-        double _gamma = 0.5d;
+        double _gamma = 0.6d;
+        /// <summary>
+        /// The gamma used when drawing to the matrix display
+        /// </summary>
         public double Gamma
         {
             get => _gamma;
@@ -84,18 +24,170 @@ namespace SpawnDev.MatrixLEDDisplay
                 _ = SendPicture();
             }
         }
+        (byte r, byte g, byte b) _backgroundColor = (128, 128, 128);
+        /// <summary>
+        /// This color will be used as the background color for images with transparency.
+        /// </summary>
+        public string BackgroundColorHex
+        {
+            get => $"#{Convert.ToHexString(new[] { _backgroundColor.r, _backgroundColor.g, _backgroundColor.b })}";
+            set
+            {
+                if (string.IsNullOrEmpty(value) || !value.StartsWith("#")) return;
+                var bytes = Convert.FromHexString(value.Substring(1));
+                BackgroundColor = (bytes[0], bytes[1], bytes[2]);
+            }
+        }
+        /// <summary>
+        /// This color will be used as the background color for images with transparency.
+        /// </summary>
+        public (byte r, byte g, byte b) BackgroundColor
+        {
+            get => _backgroundColor;
+            set
+            {
+                if (_backgroundColor == value) return;
+                _backgroundColor = value;
+                _ = SendPicture();
+            }
+        }
+        /// <summary>
+        /// Paired Bluetooth device id in base 64 format (could change.) This appears to be generated when the device is paired and may change is re-paired.
+        /// </summary>
+        public string? DeviceId => BLEDevice?.Id;
+        /// <summary>
+        /// Paired Bluetooth device id in hex format. This appears to be generated when the device is paired and may change is re-paired.
+        /// </summary>
+        public string? DeviceHexId
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(DeviceId)) return null;
+                var bytes = Convert.FromBase64String(DeviceId);
+                var ret = Convert.ToHexString(bytes);
+                return ret;
+            }
+        }
+        /// <summary>
+        /// The device name
+        /// </summary>
+        public string DeviceName { get; private set; } = "MI Matrix Display";
+        /// <summary>
+        /// The device BLE service UUID
+        /// </summary>
+        public string BLEServiceId { get; private set; } = "0000ffd0-0000-1000-8000-00805f9b34fb";
+        /// <summary>
+        /// The device LED BLE characteristic UUID
+        /// </summary>
+        public string LEDCharacteristicId { get; private set; } = "0000ffd1-0000-1000-8000-00805f9b34fb";
+        /// <summary>
+        /// The device Notify BLE characteristic UUID (currently unsure what this is used for)
+        /// </summary>
+        public string NotifyCharacteristicId { get; private set; } = "0000ffd2-0000-1000-8000-00805f9b34fb";
+        // Bluetooth vars
+        /// <summary>
+        /// Bluetooth device
+        /// </summary>
+        public BluetoothDevice? BLEDevice { get; private set; }
+        /// <summary>
+        /// Bluetooth device GATT server
+        /// </summary>
+        public BluetoothRemoteGATTServer? BLEServer { get; private set; }
+        /// <summary>
+        /// Bluetooth device GATT service
+        /// </summary>
+        public BluetoothRemoteGATTService? BLEService { get; private set; }
+        /// <summary>
+        /// Bluetooth device GATT characteristic
+        /// </summary>
+        public BluetoothRemoteGATTCharacteristic? NotifyCharacteristic { get; private set; }
+        /// <summary>
+        /// Bluetooth device GATT characteristic
+        /// </summary>
+        public BluetoothRemoteGATTCharacteristic? LEDCharacteristic { get; private set; }
+        /// <summary>
+        /// True if the device is currently connected
+        /// </summary>
+        public bool Connected { get; private set; } = false;
+        /// <summary>
+        /// Fired when the device's state has changed
+        /// </summary>
+        public event Action<MIMatrixDisplay> OnStateChanged = default!;
+        /// <summary>
+        /// Creates a new instance
+        /// </summary>
+        /// <param name="js"></param>
+        public MIMatrixDisplay(BlazorJSRuntime js)
+        {
+            JS = js;
+        }
+        /// <summary>
+        /// Creates a simple test image
+        /// </summary>
+        /// <param name="n"></param>
+        /// <returns></returns>
+        public (byte r, byte g, byte b,  byte a)[] CreateTestPicture(byte n = 1)
+        {
+            var ret = new (byte r, byte g, byte b, byte a)[256];
+            for (var y = 0; y < 16; y++)
+            {
+                for (var x = 0; x < 16; x++)
+                {
+                    var r = x * 16;
+                    var g = y * 16;
+                    var b = n * 255;
+                    var i = y * 16 + x;
+                    ret[i] = ((byte)r, (byte)g, (byte)b, (byte)255);
+                }
+            }
+            return ret;
+        }
+        /// <summary>
+        /// Opens a file picker to select an image that will be loaded onto the display.
+        /// </summary>
+        /// <returns></returns>
+        public async Task SelectAndLoadImage()
+        {
+            if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
+            {
+                var files = await FilePicker.ShowOpenFilePicker("", false);
+                if (files == null || files.Length == 0) return;
+                var file = files[0];
+                var imageDataUrl = await FileReader.ReadAsDataURLAsync(file);
+                if (string.IsNullOrEmpty(imageDataUrl)) return;
+                using var image = await HTMLImageElement.CreateFromImageAsync(imageDataUrl);
+                using var canvas = new OffscreenCanvas(16, 16);
+                using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
+                ctx.DrawImage(image, 0, 0, 16, 16);
+                var imageDataBytes = ctx.GetImageBytes()!;
+                //
+                var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
+                await LEDCharacteristic.WriteValueWithoutResponse(initCommand);
+                await Task.Delay(2);
+                //
+                await SendPictureRGBA(imageDataBytes);
+            }
+        }
+        /// <summary>
+        /// Sends a simple test image to the display
+        /// </summary>
+        /// <returns></returns>
         public async Task SendTestPicture()
         {
-            if (bleServer != null && bleServer.Connected && bleServiceFound != null && characteristic != null)
+            if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
             {
                 var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
-                await characteristic.WriteValueWithoutResponse(initCommand);
+                await LEDCharacteristic.WriteValueWithoutResponse(initCommand);
                 await Task.Delay(2);
                 //
                 var imageData = CreateTestPicture(1);
                 await SendPicture(imageData);
             }
         }
+        /// <summary>
+        /// Connect to a display
+        /// </summary>
+        /// <returns></returns>
         public async Task<bool> Connect()
         {
             if (Connected)
@@ -131,33 +223,30 @@ namespace SpawnDev.MatrixLEDDisplay
                     Filters = new BluetoothDeviceFilter[] {
                     new BluetoothDeviceFilter
                     {
-                        Name  = deviceName,
+                        Name  = DeviceName,
                     },
                 },
-                    OptionalServices = new[] { bleService }
+                    OptionalServices = new[] { BLEServiceId }
                 };
                 // 
-                device = await bluetooth!.RequestDevice(options);
-                device.OnGATTServerDisconnected += Device_OnGATTServerDisconnected;
+                BLEDevice = await bluetooth!.RequestDevice(options);
+                BLEDevice.OnGATTServerDisconnected += Device_OnGATTServerDisconnected;
                 //bleState = $"Connected to device {device.Name}";
-                bleServer = await device.GATT!.Connect();
-                bleServiceFound = await bleServer.GetPrimaryService(bleService);
+                BLEServer = await BLEDevice.GATT!.Connect();
+                BLEService = await BLEServer.GetPrimaryService(BLEServiceId);
                 // LED characteristic - WriteNoResponse
-                characteristic = await bleServiceFound.GetCharacteristic(ledCharacteristicUUID);
+                LEDCharacteristic = await BLEService.GetCharacteristic(LEDCharacteristicId);
                 // ? characteristic - Notify
-                sensorCharacteristicFound = await bleServiceFound.GetCharacteristic(sensorCharacteristic);
-                sensorCharacteristicFound.OnCharacteristicValueChanged += SensorCharacteristicFound_OnCharacteristicValueChanged;
-                await sensorCharacteristicFound.StartNotifications();
+                NotifyCharacteristic = await BLEService.GetCharacteristic(NotifyCharacteristicId);
+                NotifyCharacteristic.OnCharacteristicValueChanged += SensorCharacteristicFound_OnCharacteristicValueChanged;
+                await NotifyCharacteristic.StartNotifications();
                 Connected = true;
                 //timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             }
-            catch (Exception ex)
-            {
-                //bleState = "Connect failed:" + ex.Message;
-            }
+            catch
+            { }
             return Connected;
         }
-        public event Action<MIMatrixDisplay> OnStateChanged = default!;
         void StateHasChanged()
         {
             OnStateChanged?.Invoke(this);
@@ -178,57 +267,81 @@ namespace SpawnDev.MatrixLEDDisplay
             //timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             StateHasChanged();
         }
+        /// <summary>
+        /// Disconnect from the display
+        /// </summary>
+        /// <param name="forget"></param>
         public void Disconnect(bool forget = false)
         {
             if (!Connected) return;
             Connected = false;
-            characteristic?.Dispose();
-            characteristic = null;
-            if (sensorCharacteristicFound != null)
+            LEDCharacteristic?.Dispose();
+            LEDCharacteristic = null;
+            if (NotifyCharacteristic != null)
             {
-                sensorCharacteristicFound.OnCharacteristicValueChanged -= SensorCharacteristicFound_OnCharacteristicValueChanged;
-                if (bleServer?.Connected == true)
+                NotifyCharacteristic.OnCharacteristicValueChanged -= SensorCharacteristicFound_OnCharacteristicValueChanged;
+                if (BLEServer?.Connected == true)
                 {
-                    _ = sensorCharacteristicFound.StopNotifications();
+                    _ = NotifyCharacteristic.StopNotifications();
                 }
-                sensorCharacteristicFound.Dispose();
-                sensorCharacteristicFound = null;
+                NotifyCharacteristic.Dispose();
+                NotifyCharacteristic = null;
             }
-            if (bleServiceFound != null)
+            if (BLEService != null)
             {
-                bleServiceFound.Dispose();
-                bleServiceFound = null;
+                BLEService.Dispose();
+                BLEService = null;
             }
-            if (bleServer != null)
+            if (BLEServer != null)
             {
-                if (bleServer.Connected)
+                if (BLEServer.Connected)
                 {
                     // this will cause Device_OnGATTServerDisconnected to fire.
-                    bleServer.Disconnect();
+                    BLEServer.Disconnect();
                 }
-                bleServer.Dispose();
-                bleServer = null;
+                BLEServer.Dispose();
+                BLEServer = null;
             }
-            if (device != null)
+            if (BLEDevice != null)
             {
                 // Forget is disabled... it is listed as a method for BluetoothDevice but does not exist in Chrome...
                 //if (forget) device.Forget();
-                device.OnGATTServerDisconnected -= Device_OnGATTServerDisconnected;
-                device.Dispose();
-                device = null;
+                BLEDevice.OnGATTServerDisconnected -= Device_OnGATTServerDisconnected;
+                BLEDevice.Dispose();
+                BLEDevice = null;
             }
         }
-        public (byte r, byte g, byte b)[] Data { get; private set; } = new (byte r, byte g, byte b)[256];
-        public Task SendPicture(byte[] imageDataBytes)
+        /// <summary>
+        /// The last drawn RGB data. If the image had any transparency, the background color was used to create this data when the data was last set.
+        /// </summary>
+        public (byte r, byte g, byte b)[] DrawnData { get; private set; } = new (byte r, byte g, byte)[256];
+        /// <summary>
+        /// The last set RGBA data. Transparency data has not been processed in this data.
+        /// </summary>
+        public (byte r, byte g, byte b, byte a)[] Data { get; private set; } = new (byte r, byte g, byte, byte a)[256];
+        /// <summary>
+        /// Sends a 16x16 RGBA image to the display.
+        /// </summary>
+        /// <param name="imageDataBytes">A byte array containing RGBA, 4 bytes per pixel, data to be sent to the display after gamma and transparency processing.</param>
+        /// <returns></returns>
+        public Task SendPictureRGBA(byte[] imageDataBytes)
         {
-            var imageData = new (byte r, byte g, byte b)[256];
+            var imageData = new (byte r, byte g, byte b, byte a)[256];
             for (int n = 0; n < imageDataBytes.Length; n += 4)
             {
                 var i = n / 4;
-                imageData[i] = (imageDataBytes[n], imageDataBytes[n + 1], imageDataBytes[n + 2]);
+                var r = imageDataBytes[n];
+                var g = imageDataBytes[n + 1];
+                var b = imageDataBytes[n + 2];
+                var a = imageDataBytes[n + 3];
+                imageData[i] = (r, g, b, a);
             }
             return SendPicture(imageData);
         }
+        /// <summary>
+        /// Resends the current picture to the display using the current settings.
+        /// </summary>
+        /// <returns></returns>
         public Task SendPicture()
         {
             return SendPicture(Data);
@@ -236,12 +349,41 @@ namespace SpawnDev.MatrixLEDDisplay
         byte GammaCorrect(byte v, double gammaCorrection)
         {
             var s = (double)v / 255d;
-            var gc  = Math.Pow(s, gammaCorrection);
+            var gc = Math.Pow(s, gammaCorrection);
             return (byte)(gc * 255d);
         }
-        public async Task<bool> SendPicture((byte r, byte g, byte b)[] imageData)
+        /// <summary>
+        /// Sends a 16x16 RGB image to the display.
+        /// </summary>
+        /// <param name="imageData"></param>
+        /// <returns></returns>
+        public Task<bool> SendPicture((byte r, byte g, byte b)[] imageData)
         {
-            if (characteristic == null) return false;
+            return SendPicture(imageData.Select(o => (o.r, o.g, o.b, (byte)255)).ToArray());
+        }
+        /// <summary>
+        /// Sends a 16x16 RGBA image to the display.
+        /// </summary>
+        /// <param name="imageData"></param>
+        /// <returns></returns>
+        public async Task<bool> SendPicture((byte r, byte g, byte b, byte a)[] imageData)
+        {
+            if (LEDCharacteristic == null) return false;
+            for (var i = 0; i < imageData.Length; i++)
+            {
+                var srcPixel = imageData[i];
+                var r = srcPixel.r;
+                var g = srcPixel.g;
+                var b = srcPixel.b;
+                if (srcPixel.a < 255)
+                {
+                    var an = (double)srcPixel.a / 255d;
+                    r = (byte)double.Lerp(BackgroundColor.r, r, an);
+                    g = (byte)double.Lerp(BackgroundColor.g, g, an);
+                    b = (byte)double.Lerp(BackgroundColor.b, b, an);
+                }
+                DrawnData[i] = (r, g, b);
+            }
             try
             {
                 var gammaCorrection = 1d / Gamma;
@@ -254,26 +396,37 @@ namespace SpawnDev.MatrixLEDDisplay
                     for (var i = 0; i < 32; i++)
                     {
                         var pixelIndex = blockIndex * 32 + i;
-                        blockData[3 + i * 3] = GammaCorrect(imageData[pixelIndex].r, gammaCorrection); // Red
-                        blockData[3 + i * 3 + 1] = GammaCorrect(imageData[pixelIndex].g, gammaCorrection); // Green
-                        blockData[3 + i * 3 + 2] = GammaCorrect(imageData[pixelIndex].b, gammaCorrection); // Blue
+                        var srcPixel = imageData[pixelIndex];
+                        var r = srcPixel.r;
+                        var g = srcPixel.g;
+                        var b = srcPixel.b;
+                        if (srcPixel.a < 255)
+                        {
+                            var an = (double)srcPixel.a / 255d;
+                            r = (byte)double.Lerp(BackgroundColor.r, r, an);
+                            g = (byte)double.Lerp(BackgroundColor.g, g, an);
+                            b = (byte)double.Lerp(BackgroundColor.b, b, an);
+                        }
+                        blockData[3 + i * 3] = GammaCorrect(r, gammaCorrection);     // Red
+                        blockData[3 + i * 3 + 1] = GammaCorrect(g, gammaCorrection); // Green
+                        blockData[3 + i * 3 + 2] = GammaCorrect(b, gammaCorrection); // Blue
                     }
                     blockData[99] = 0x55;
                     Console.WriteLine($"Sending block {blockIndex + 1} / 8");
-                    await characteristic.WriteValueWithoutResponse(blockData);
+                    await LEDCharacteristic.WriteValueWithoutResponse(blockData);
                     await Task.Delay(5);
                 }
                 Data = imageData;
                 StateHasChanged();
                 return true;
             }
-            catch (Exception ex)
-            {
-
-            }
+            catch
+            { }
             return false;
         }
-
+        /// <summary>
+        /// Disconnect and release resources
+        /// </summary>
         public void Dispose()
         {
             Disconnect();
