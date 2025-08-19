@@ -36,7 +36,7 @@ Created 2025-08-17. Current version allows connecting to the display and drawing
 From Chrome Bluetooth Devices  
 - chrome://bluetooth-internals/#devices  
 
-Device Name: MI Matric Display   
+Device Name: MI Matrix Display   
 Services:  
 - 0000ffd0-0000-1000-8000-00805f9b34fb - Primary  
 - Characteristics:  
