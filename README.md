@@ -20,7 +20,7 @@ and [Matrix Panel Plus](https://apps.apple.com/us/app/matrix-panel-plus/id674326
 I tried "MatrixPanel Plus" on 2 Android phones and the app didn't see or connect to the display on either one. The problem appears to be the app itself because my old Moto E running Android 10 was able to connect to and control the MI Matrix Display using Google Chrome and this demo.
 The app must work on some devices though, as the GitHub repo I found with a lot of Bluetooth protocol work for this display apparently used that app. Reference: [offe/mi-led-display/snoops/README.md](https://github.com/offe/mi-led-display/blob/main/snoops/README.md)
 
-So if you bought one of these cool displays and want an alternative to the default app, this library and demo app app can help you do that.
+So if you bought one of these cool displays and want an alternative to the default app, this library and demo app can help you do that.
 
 ## References
 - Awesome protocol work: [offe/mi-led-display](https://github.com/offe/mi-led-display)
