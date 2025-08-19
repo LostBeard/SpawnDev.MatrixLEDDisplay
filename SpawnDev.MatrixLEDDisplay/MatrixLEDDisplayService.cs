@@ -37,13 +37,13 @@ namespace SpawnDev.MatrixLEDDisplay
                 return null;
             }
             // remove the device if it was previously connected and sitll in the list
-            RemoveDisplay(display.BLEDevice!.Id);
+            RemoveDisplay(display!.DeviceId);
             // add
             Displays.Add(display);
             OnDisplayAdded?.Invoke(display);
             return display;
         }
-        public MIMatrixDisplay? GetDisplay(string id) => Displays.FirstOrDefault(o => o.BLEDevice?.Id == id);
+        public MIMatrixDisplay? GetDisplay(string id) => Displays.FirstOrDefault(o => o?.DeviceId == id);
         public bool RemoveDisplay(MIMatrixDisplay display, bool forget = false)
         {
             if (display == null) return false;

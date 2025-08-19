@@ -21,7 +21,8 @@
 @foreach (var display in DisplayService.Displays)
 {
     <div>
-        <div>Name: @display.BLEDevice?.Name</div>
+        <div>Name: @display.DeviceName</div>
+        <div>Id: @display.DeviceHexId</div>
         <div>
             <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Load Test Image</button>
             <button disabled="@(!display.Connected)" @onclick=display.SelectAndLoadImage>Load Image File</button>

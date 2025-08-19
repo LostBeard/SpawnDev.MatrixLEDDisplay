@@ -54,7 +54,7 @@ namespace SpawnDev.MatrixLEDDisplay
         /// <summary>
         /// Paired Bluetooth device id in base 64 format (could change.) This appears to be generated when the device is paired and may change is re-paired.
         /// </summary>
-        public string? DeviceId => BLEDevice?.Id;
+        public string? DeviceId { get; private set; }
         /// <summary>
         /// Paired Bluetooth device id in hex format. This appears to be generated when the device is paired and may change is re-paired.
         /// </summary>
@@ -220,14 +220,19 @@ namespace SpawnDev.MatrixLEDDisplay
                 if (bluetooth == null) return false;
                 var options = new BluetoothDeviceOptions
                 {
-                    Filters = new BluetoothDeviceFilter[] {
-                    new BluetoothDeviceFilter
-                    {
-                        Name  = DeviceName,
-                    },
-                },
+                    AcceptAllDevices = true,
                     OptionalServices = new[] { BLEServiceId }
                 };
+                if (!string.IsNullOrEmpty(DeviceName))
+                {
+                    options.Filters = new BluetoothDeviceFilter[] {
+                        new BluetoothDeviceFilter
+                        {
+                            Name  = DeviceName,
+                        },
+                    };
+                    options.AcceptAllDevices = false;
+                }
                 // 
                 BLEDevice = await bluetooth!.RequestDevice(options);
                 BLEDevice.OnGATTServerDisconnected += Device_OnGATTServerDisconnected;
@@ -240,6 +245,8 @@ namespace SpawnDev.MatrixLEDDisplay
                 NotifyCharacteristic = await BLEService.GetCharacteristic(NotifyCharacteristicId);
                 NotifyCharacteristic.OnCharacteristicValueChanged += SensorCharacteristicFound_OnCharacteristicValueChanged;
                 await NotifyCharacteristic.StartNotifications();
+                DeviceId = BLEDevice.Id;
+                DeviceName = BLEDevice.Name;
                 Connected = true;
                 //timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             }
