@@ -1,7 +1,6 @@
 ﻿using SpawnDev.BlazorJS;
 using SpawnDev.BlazorJS.JSObjects;
 using SpawnDev.BlazorJS.Toolbox;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SpawnDev.MatrixLEDDisplay
 {
@@ -118,6 +117,10 @@ namespace SpawnDev.MatrixLEDDisplay
         /// </summary>
         public BluetoothRemoteGATTCharacteristic? NotifyCharacteristic { get; private set; }
         /// <summary>
+        /// Bluetooth device GATT descriptor found on the characteristic that has a notify property
+        /// </summary>
+        public BluetoothRemoteGATTDescriptor? NotifyDescriptor { get; private set; }
+        /// <summary>
         /// Bluetooth device GATT characteristic
         /// </summary>
         public BluetoothRemoteGATTCharacteristic? LEDCharacteristic { get; private set; }
@@ -169,9 +172,10 @@ namespace SpawnDev.MatrixLEDDisplay
                 var files = await FilePicker.ShowOpenFilePicker("", false);
                 if (files == null || files.Length == 0) return;
                 var file = files[0];
-                var imageDataUrl = await FileReader.ReadAsDataURLAsync(file);
-                if (string.IsNullOrEmpty(imageDataUrl)) return;
-                using var image = await HTMLImageElement.CreateFromImageAsync(imageDataUrl);
+                var imageObjectUrl = URL.CreateObjectURL(file);
+                if (string.IsNullOrEmpty(imageObjectUrl)) return;
+                using var image = await HTMLImageElement.CreateFromImageAsync(imageObjectUrl);
+                URL.RevokeObjectURL(imageObjectUrl);
                 await SendPicture(image);
             }
         }
@@ -264,6 +268,10 @@ namespace SpawnDev.MatrixLEDDisplay
                 // ? characteristic - Notify
                 NotifyCharacteristic = await BLEService.GetCharacteristic(NotifyCharacteristicId);
                 NotifyCharacteristic.OnCharacteristicValueChanged += SensorCharacteristicFound_OnCharacteristicValueChanged;
+                // NotifyDescriptor - not sure what the 2 byte value that can be read from this means. Only seen as 0x0000
+                NotifyDescriptor = await NotifyCharacteristic.GetDescriptor("00002902-0000-1000-8000-00805f9b34fb");
+                NotifyDescriptorValue = await GetNotifyDescriptorValueBytes();
+                JS.Log("NotifyDescriptorValue", NotifyDescriptorValue.Select(o => (int)o).ToArray());
                 await NotifyCharacteristic.StartNotifications();
                 DeviceId = BLEDevice.Id;
                 DeviceName = BLEDevice.Name;
@@ -273,6 +281,15 @@ namespace SpawnDev.MatrixLEDDisplay
             catch
             { }
             return Connected;
+        }
+        /// <summary>
+        /// The value NotifyDescriptor had when last read
+        /// </summary>
+        public byte[] NotifyDescriptorValue { get; private set;} = new byte[2];
+        async Task<byte[]> GetNotifyDescriptorValueBytes()
+        {
+            using var dataView = await NotifyDescriptor!.ReadValue();
+            return dataView.ReadBytes();
         }
         void StateHasChanged()
         {
@@ -286,12 +303,14 @@ namespace SpawnDev.MatrixLEDDisplay
             }
             StateHasChanged();
         }
-        void SensorCharacteristicFound_OnCharacteristicValueChanged(Event e)
+        async void SensorCharacteristicFound_OnCharacteristicValueChanged(Event e)
         {
             //using var characteristic = e.TargetAs<BluetoothRemoteGATTCharacteristic>();
             //using var value = characteristic.Value;
             //retrievedValue = textDecoder!.Decode(value.Buffer);
             //timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            NotifyDescriptorValue = await GetNotifyDescriptorValueBytes();
+            JS.Log("NotifyDescriptorValue", NotifyDescriptorValue.Select(o => (int)o).ToArray());
             StateHasChanged();
         }
         /// <summary>
@@ -366,6 +385,25 @@ namespace SpawnDev.MatrixLEDDisplay
             return SendPicture(imageData);
         }
         /// <summary>
+        /// Sends a 16x16 RGB image to the display.
+        /// </summary>
+        /// <param name="imageDataBytes">A byte array containing RGBA, 4 bytes per pixel, data to be sent to the display after gamma and transparency processing.</param>
+        /// <returns></returns>
+        public Task SendPictureRGB(byte[] imageDataBytes)
+        {
+            var imageData = new (byte r, byte g, byte b, byte a)[256];
+            for (int n = 0; n < imageDataBytes.Length; n += 3)
+            {
+                var i = n / 4;
+                var r = imageDataBytes[n];
+                var g = imageDataBytes[n + 1];
+                var b = imageDataBytes[n + 2];
+                var a = (byte)255;
+                imageData[i] = (r, g, b, a);
+            }
+            return SendPicture(imageData);
+        }
+        /// <summary>
         /// Resends the current picture to the display using the current settings.
         /// </summary>
         /// <returns></returns>
@@ -379,6 +417,11 @@ namespace SpawnDev.MatrixLEDDisplay
             var gc = Math.Pow(s, gammaCorrection);
             return (byte)(gc * 255d);
         }
+        /// <summary>
+        /// Sends an HTMLImageElement to the display.
+        /// </summary>
+        /// <param name="image"></param>
+        /// <returns></returns>
         public async Task SendPicture(HTMLImageElement image)
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
@@ -412,7 +455,48 @@ namespace SpawnDev.MatrixLEDDisplay
                 await SendPictureRGBA(imageDataBytes);
             }
         }
+        /// <summary>
+        /// Sends an OffscreenCanvas to the display.
+        /// </summary>
         public async Task SendPicture(OffscreenCanvas image)
+        {
+            if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
+            {
+                var width = image.Width;
+                var height = image.Height;
+                using var canvas = new OffscreenCanvas(16, 16);
+                using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
+                var biggestSide = Math.Max(width, height);
+                if (biggestSide <= 16)
+                {
+                    // center
+                    var x = (int)Math.Round((16 - width) / 2d);
+                    var y = (int)Math.Round((16 - height) / 2d);
+                    ctx.DrawImage(image, x, y, width, height);
+                }
+                else
+                {
+                    // scale down and center
+                    var scale = 16f / (float)biggestSide;
+                    var scaleWidth = (int)(width * scale);
+                    var scaleHeight = (int)(height * scale);
+                    var x = (int)Math.Round((16 - scaleWidth) / 2d);
+                    var y = (int)Math.Round((16 - scaleHeight) / 2d);
+                    ctx.DrawImage(image, x, y, scaleWidth, scaleHeight);
+                }
+                var imageDataBytes = ctx.GetImageBytes()!;
+                //
+                var initCommand = new byte[] { 0xbc, 0x0f, 0xf1, 0x08, 0x08, 0x55 };
+                await LEDCharacteristic.WriteValueWithoutResponse(initCommand);
+                await Task.Delay(2);
+                //
+                await SendPictureRGBA(imageDataBytes);
+            }
+        }
+        /// <summary>
+        /// Sends an HTMLCanvasElement to the display.
+        /// </summary>
+        public async Task SendPicture(HTMLCanvasElement image)
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
             {

@@ -1,56 +1,51 @@
 ﻿@page "/"
 @using SpawnDev.BlazorJS
 @using SpawnDev.BlazorJS.JSObjects
-@using SpawnDev.MatrixLEDDisplay.Demo.Components
-@using SpawnDev.MatrixLEDDisplay.UI
 @implements IAsyncDisposable
 
-<PageTitle>Matrix LED Display Demo</PageTitle>
-
-<h1>Matrix LED Display Demo</h1>
-<div>
-    <img src="mi-matrix-display-400x334.png" width="48" />
-</div>
-<button disabled="@(!isWebBluetoothEnabled || _connecting)" @onclick=ConnectClick>Connect</button>
-<p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
-<div>
-    Images will be scaled to 16x16. 16x16 pixel art is recommended.
-    The device will revert upon disconnect.
-</div>
-
-@foreach (var display in DisplayService.Displays)
-{
+<div class="container">
+    <PageTitle>Matrix LED Display</PageTitle>
+    <h1>Matrix LED Display</h1>
     <div>
-        <div>Name: @display.DeviceName</div>
-        <div>Id: @display.DeviceHexId</div>
-        <div>
-            <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Load Pattern</button>
-            <button disabled="@(!display.Connected)" @onclick=@(() => LoadPenguinImage(display))>Load Test Image</button>
-            <button disabled="@(!display.Connected)" @onclick=display.SelectAndLoadImage>Load Image File</button>
-            <button @onclick=@(() => DisplayService.RemoveDisplay(display))>Remove</button>
-        </div>
-        <div title="Matrix display gamma correction">
-            <label for="gamma">Gamma: @(Math.Round(display.Gamma, 2))</label><br />
-            <UISlider Name="gamma" Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)" />
-        </div>
-        <div title="Used with images that have transparency">
-            <label for="background_color">Background Color: @display.BackgroundColorHex</label><br />
-            <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColorHex">
-        </div>
-        <div>
-            <LEDMatrix Data="display.DrawnData"></LEDMatrix>
-        </div>
+        <img src="mi-matrix-display-400x334.png" width="48" />
     </div>
-}
+    <button disabled="@(!isWebBluetoothEnabled || _connecting)" @onclick=ConnectClick>Connect</button>
+    <p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
+    <div>
+        Images larger than 16x16 will be downscaled. 
+        16x16 grid sized pixel art is recommended, the actual image size can be larger.
+        The device will revert upon disconnect.
+    </div>
+    <div>
+        @foreach (var display in DisplayService.Displays)
+        {
+            <div>
+                <div>Name: @display.DeviceName</div>
+                <div>Id: @display.DeviceHexId</div>
+                <div>
+                    <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Load Pattern</button>
+                    <button disabled="@(!display.Connected)" @onclick=@(() => LoadPenguinImage(display))>Load Test Image</button>
+                    <button disabled="@(!display.Connected)" @onclick=display.SelectAndLoadImage>Load Image File</button>
+                    <button @onclick=@(() => DisplayService.RemoveDisplay(display))>Remove</button>
+                </div>
+                <div title="Matrix display gamma correction">
+                    <label for="gamma">Gamma: @(Math.Round(display.Gamma, 2))</label><br />
+                    <UISlider Name="gamma" Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)" />
+                </div>
+                <div title="Used with images that have transparency">
+                    <label for="background_color">Background Color: @display.BackgroundColorHex</label><br />
+                    <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColorHex">
+                </div>
+                <div>
+                    <LEDMatrix Data="display.DrawnData" />
+                </div>
+            </div>
+        }
+    </div>
+</div>
 
 @code
 {
-
-    void ColorPicker(ChangeEventArgs args, MIMatrixDisplay display)
-    {
-        var newColor = args.Value as string;
-        display.BackgroundColorHex = newColor!;
-    }
     [Inject]
     BlazorJSRuntime JS { get; set; } = default!;
 
@@ -97,6 +92,11 @@
             }
             StateHasChanged();
         }
+    }
+    void ColorPicker(ChangeEventArgs args, MIMatrixDisplay display)
+    {
+        var newColor = args.Value as string;
+        display.BackgroundColorHex = newColor!;
     }
     bool _connecting = false;
     async Task ConnectClick()

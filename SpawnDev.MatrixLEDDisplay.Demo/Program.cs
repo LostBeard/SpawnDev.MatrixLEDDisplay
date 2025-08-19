@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Radzen;
 using SpawnDev.BlazorJS;
+using SpawnDev.MatrixLEDDisplay.Demo.Layout;
+using SpawnDev.MatrixLEDDisplay.Demo.Layout.AppTray;
 using SpawnDev.MatrixLEDDisplay;
 using SpawnDev.MatrixLEDDisplay.Demo;
 
@@ -16,5 +19,10 @@ if (JS.IsWindow)
 }
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+builder.Services.AddRadzenComponents();
+builder.Services.AddScoped<AppTrayService>();
+builder.Services.AddScoped<MainLayoutService>();
+builder.Services.AddScoped<ThemeTrayIconService>();
 
 await builder.Build().BlazorJSRunAsync();
