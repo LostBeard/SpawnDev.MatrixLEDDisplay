@@ -13,12 +13,12 @@ The instructions that come with this display tells the user to install an app on
 but there is no app with that name in the iOS App Store or the Android Play Store. There are apps that claim to be the new version of the official app, 
 [MatrixPanel Plus](https://play.google.com/store/apps/details?id=com.wzjledaxc.ledplus) on Android,
 and [Matrix Panel Plus](https://apps.apple.com/us/app/matrix-panel-plus/id6743264417) on iOS,
- but the publisher is a one-off publisher named "Chrisamy" not the display maker "Merkury Innovations". Merkury Innovations website doesn't list this display.
+ but the publisher is a one-off publisher named "Chrisamy" not the display maker "Merkury Innovations".
+ Merkury Innovations website doesn't list this display. 
+ This YouTube [reviewer](https://www.youtube.com/watch?v=QN0TxJoeTNk) had the same issue.
 
 I tried "MatrixPanel Plus" on 2 Android phones and the app didn't see or connect to the display on either one. The problem appears to be the app itself because my old Moto E running Android 10 was able to connect to and control the MI Matrix Display using Google Chrome and this demo.
 The app must work on some devices though, as the GitHub repo I found with a lot of Bluetooth protocol work for this display apparently used that app. Reference: [offe/mi-led-display/snoops/README.md](https://github.com/offe/mi-led-display/blob/main/snoops/README.md)
-
-This YouTube [reviewer](https://www.youtube.com/watch?v=QN0TxJoeTNk) had the same issue.
 
 So if you bought one of these cool displays and want an alternative to the default app, this library and demo app app can help you do that.
 
