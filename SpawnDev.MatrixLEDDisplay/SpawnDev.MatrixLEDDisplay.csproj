@@ -19,7 +19,6 @@
 		<RepositoryUrl>https://github.com/LostBeard/SpawnDev.MatrixLEDDisplay.git</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>Blazor;BlazorWebAssembly;MatrixLEDDisplay;BLE;Bluetooth;WebBrowser</PackageTags>
-		<LangVersion>13.0</LangVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
