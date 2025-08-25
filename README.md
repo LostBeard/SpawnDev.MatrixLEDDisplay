@@ -5,6 +5,7 @@ Blazor WebAssembly code and demo app for communicating with the "Matrix LED Disp
 - [MI Matrix Display Web App](https://lostbeard.github.io/SpawnDev.MatrixLEDDisplay/)  
 - Display `.jpg`, `.png`, or `.gif` images on your 16x16 LED display using your web browser and Bluetooth.
 - Animated `.gif` images are supported (limited to 8 frames.)
+- No graffiti mode at this time.
 
 ![Matrix LED Display](https://raw.githubusercontent.com/LostBeard/SpawnDev.MatrixLEDDisplay/master/SpawnDev.MatrixLEDDisplay.Demo/wwwroot/mi-matrix-display-400x334.png)
 
@@ -20,8 +21,9 @@ and [Matrix Panel Plus](https://apps.apple.com/us/app/matrix-panel-plus/id674326
  Merkury Innovations website doesn't list this display. 
  This YouTube [reviewer](https://www.youtube.com/watch?v=QN0TxJoeTNk) had the same issue.
 
-I tried "MatrixPanel Plus" on 2 Android phones and the app didn't see or connect to the display on either one. The problem appears to be the app itself because my old Moto E running Android 10 was able to connect to and control the MI Matrix Display using Google Chrome and this demo.
-The app must work on some devices though, as the GitHub repo I found with a lot of Bluetooth protocol work for this display apparently used that app. Reference: [offe/mi-led-display/snoops/README.md](https://github.com/offe/mi-led-display/blob/main/snoops/README.md)
+I tried "MatrixPanel Plus" on 3 Android phones and the app only worked on 1 of them (the only Samsung, and newer than the others.) 
+The problem appears to be the app itself because my old Moto E running Android 10 was able to connect to and control the MI Matrix Display 
+using Google Chrome and this [MI Matrix Display Web App](https://lostbeard.github.io/SpawnDev.MatrixLEDDisplay/).
 
 So if you bought one of these cool displays and want an alternative to the default app, this library and demo app can help you do that.
 
