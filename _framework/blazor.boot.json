@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "SpawnDev.MatrixLEDDisplay.Demo",
   "resources": {
-    "hash": "sha256-0BWnC6D1NUubnA4N/sZTU6DGoeP9PQ90HZExPtX60gw=",
+    "hash": "sha256-YYLqbQaH83105+ueZ92XLUxMPkOQ8ZixLQvDqsoEU+E=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-Z9Xe/xz8JqHq5fNG6eiZW/7ysMS/8ItmX5BYPIQPNTc="
     },
@@ -18,7 +18,7 @@
     },
     "coreAssembly": {},
     "assembly": {
-      "Microsoft.AspNetCore.Components.wasm": "sha256-L0hMrF6hrTOGA9b99+5SSWoJgVtyoIopuhti9cfOBH4=",
+      "Microsoft.AspNetCore.Components.wasm": "sha256-MOu4Po3Z3rKuEjDVTBWQkktpk1Y4R0Yv1B3p9G8PxFQ=",
       "Microsoft.AspNetCore.Components.Forms.wasm": "sha256-zOEnJqsO/ulIIHpjg5BT47E+R1wRosu7p0plp8HZryc=",
       "Microsoft.AspNetCore.Components.Web.wasm": "sha256-UnGvDRgRSsrRHnecMxGHd7XwM1Qn44EejM8ahaL9Yh0=",
       "Microsoft.AspNetCore.Components.WebAssembly.wasm": "sha256-a4pwgjpRHmbUcj1W9aO214pmXLjFGsIY/d3PtkSqmxM=",
@@ -86,8 +86,8 @@
       "System.Xml.XDocument.wasm": "sha256-Jko0vukE6+krICixdxcj4vyrVsPz+KCYLvj/0hUb9mI=",
       "System.wasm": "sha256-/Ib2sECJIp5OmAw2FVP/3jA36Bh6yA6fac798DlmOd8=",
       "System.Private.CoreLib.wasm": "sha256-82mXPftPSnEAhCvo25kaUT5aZbkLBI+Bsey+j46jSJs=",
-      "SpawnDev.MatrixLEDDisplay.wasm": "sha256-47kF+CrTdhoypWjUJ3nyrv9fnV2cdt+CkvFKz5MoreE=",
-      "SpawnDev.MatrixLEDDisplay.Demo.wasm": "sha256-ewY9zkKFphz9E+vcDxyL+q6wRc+lrKJSzKozhSOmDtk="
+      "SpawnDev.MatrixLEDDisplay.wasm": "sha256-hMhuagw8Me8N2fEb16mcFWm7j84ei6J/6n5jhEUejjM=",
+      "SpawnDev.MatrixLEDDisplay.Demo.wasm": "sha256-y67Xu9ik/F3QoynJNn997GF8L5Om26D9LMSFoMWqFbo="
     },
     "libraryInitializers": {
       "SpawnDev.BlazorJS.lib.module.js": "sha256-MSEFzzIHfyaslxH4GvsWrzxOUHz5n4SKxG0AiWpiYV0="
