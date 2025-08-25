@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "SpawnDev.MatrixLEDDisplay.Demo",
   "resources": {
-    "hash": "sha256-YYLqbQaH83105+ueZ92XLUxMPkOQ8ZixLQvDqsoEU+E=",
+    "hash": "sha256-Kba3tMarNKnZJHALBTZcGAS3WjigbVw2T1m486wElZQ=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-Z9Xe/xz8JqHq5fNG6eiZW/7ysMS/8ItmX5BYPIQPNTc="
     },
@@ -86,8 +86,8 @@
       "System.Xml.XDocument.wasm": "sha256-Jko0vukE6+krICixdxcj4vyrVsPz+KCYLvj/0hUb9mI=",
       "System.wasm": "sha256-/Ib2sECJIp5OmAw2FVP/3jA36Bh6yA6fac798DlmOd8=",
       "System.Private.CoreLib.wasm": "sha256-82mXPftPSnEAhCvo25kaUT5aZbkLBI+Bsey+j46jSJs=",
-      "SpawnDev.MatrixLEDDisplay.wasm": "sha256-hMhuagw8Me8N2fEb16mcFWm7j84ei6J/6n5jhEUejjM=",
-      "SpawnDev.MatrixLEDDisplay.Demo.wasm": "sha256-y67Xu9ik/F3QoynJNn997GF8L5Om26D9LMSFoMWqFbo="
+      "SpawnDev.MatrixLEDDisplay.wasm": "sha256-Yj4HQLDTZRpzpSUo26zoaMkKYM8HlkZRYDmG1wiOxwE=",
+      "SpawnDev.MatrixLEDDisplay.Demo.wasm": "sha256-hKEFf4cXFb0g3tDsfufHcX5LOWInb9slqJUmq05SsNw="
     },
     "libraryInitializers": {
       "SpawnDev.BlazorJS.lib.module.js": "sha256-MSEFzzIHfyaslxH4GvsWrzxOUHz5n4SKxG0AiWpiYV0="
