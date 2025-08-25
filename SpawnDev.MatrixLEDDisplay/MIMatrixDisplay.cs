@@ -301,17 +301,17 @@ namespace SpawnDev.MatrixLEDDisplay
             Data = new (byte r, byte g, byte b, byte a)[256];
             await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
         }
-        public async Task Off()
+        public async Task PowerOff()
         {
             if (LEDCharacteristic == null) return;
             await LEDCharacteristic.WriteValueWithoutResponse(Command.PowerOff);
         }
-        public async Task On()
+        public async Task PowerOn()
         {
             if (LEDCharacteristic == null) return;
             await LEDCharacteristic.WriteValueWithoutResponse(Command.PowerOn);
         }
-        public async Task SlideShowMode()
+        public async Task StartSlideShowMode()
         {
             if (LEDCharacteristic == null) return;
             await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
