@@ -2,7 +2,7 @@
 @using SpawnDev.BlazorJS.JSObjects
 
 <div style="@Style">
-    <canvas style="border: 1px solid grey;" @ref=_canvasRef></canvas>
+    <canvas @onmousedown=Canvas_MouseDown @onmouseup=Canvas_MouseUp @onmousemove=Canvas_MouseMove style="border: 1px solid grey;" @ref=_canvasRef></canvas>
 </div>
 
 @code {
@@ -26,16 +26,31 @@
     int _blockSize = 0;
     int _canvasSize = 320;
     string _boxBorderColor = "black";
-    int _pixelWidth = 16;
-    int _pixelHeight = 16;
+    int _gridWidth = 16;
+    int _gridHeight = 16;
+
+    
+
+    void Canvas_MouseDown(MouseEventArgs args)
+    {
+        
+    }
+    void Canvas_MouseUp(MouseEventArgs args)
+    {
+
+    }
+    void Canvas_MouseMove(MouseEventArgs args)
+    {
+
+    }
 
     void DrawData()
     {
-        for (var y = 0; y < _pixelHeight; y++)
+        for (var y = 0; y < _gridHeight; y++)
         {
-            for (var x = 0; x < _pixelWidth; x++)
+            for (var x = 0; x < _gridWidth; x++)
             {
-                var i = y * _pixelWidth + x;
+                var i = y * _gridWidth + x;
                 var color = Data[i];
                 SetColor(x, y, color);
             }
@@ -44,7 +59,7 @@
     void SetColor(int x, int y, (byte r, byte g, byte b) color)
     {
         if (_ctx == null) return;
-        var i = y * _pixelWidth + x;
+        var i = y * _gridWidth + x;
         x = x * _blockSize;
         y = y * _blockSize;
         var x1 = x + _blockSize;
@@ -61,14 +76,14 @@
     {
         var n = 1;
         var ret = new (byte r, byte g, byte b)[256];
-        for (var y = 0; y < _pixelHeight; y++)
+        for (var y = 0; y < _gridHeight; y++)
         {
-            for (var x = 0; x < _pixelWidth; x++)
+            for (var x = 0; x < _gridWidth; x++)
             {
                 var r = x * 16;
                 var g = y * 16;
                 var b = n * 255;
-                var i = y * _pixelWidth + x;
+                var i = y * _gridWidth + x;
                 ret[i] = ((byte)r, (byte)g, (byte)b);
             }
         }
@@ -80,8 +95,8 @@
         {
             _canvas = new HTMLCanvasElement(_canvasRef);
             _ctx = _canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
-            _blockSize = (int)Math.Floor(_canvasSize / (double)_pixelWidth);
-            _canvasSize = (int)(_blockSize * _pixelWidth); // 16 blocks + 1 pixel border between each block
+            _blockSize = (int)Math.Floor(_canvasSize / (double)_gridWidth);
+            _canvasSize = (int)(_blockSize * _gridWidth); // 16 blocks + 1 pixel border between each block
             _canvas.Width = _canvasSize;
             _canvas.Height = _canvasSize;
             //Data = CreatePicture();

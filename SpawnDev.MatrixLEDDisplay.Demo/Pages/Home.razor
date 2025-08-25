@@ -3,44 +3,46 @@
 @using SpawnDev.BlazorJS.JSObjects
 @implements IAsyncDisposable
 
-<div class="container">
+<div>
     <PageTitle>Matrix LED Display</PageTitle>
-    <h1>Matrix LED Display</h1>
     <div>
-        <img src="mi-matrix-display-400x334.png" width="48" />
-    </div>
-    <button disabled="@(!isWebBluetoothEnabled || _connecting)" @onclick=ConnectClick>Connect</button>
-    <p>BLE state: <strong><span style="color:#d13a30;">@bleState</span></strong></p>
-    <div>
-        Images larger than 16x16 will be downscaled. 
-        16x16 grid sized pixel art is recommended, the actual image size can be larger.
-        The device will revert upon disconnect.
-    </div>
-    <div>
-        @foreach (var display in DisplayService.Displays)
-        {
-            <div>
-                <div>Name: @display.DeviceName</div>
-                <div>Id: @display.DeviceHexId</div>
-                <div>
-                    <button disabled="@(!display.Connected)" @onclick=display.SendTestPicture>Load Pattern</button>
-                    <button disabled="@(!display.Connected)" @onclick=@(() => LoadPenguinImage(display))>Load Test Image</button>
-                    <button disabled="@(!display.Connected)" @onclick=display.SelectAndLoadImage>Load Image File</button>
-                    <button @onclick=@(() => DisplayService.RemoveDisplay(display))>Remove</button>
-                </div>
-                <div title="Matrix display gamma correction">
-                    <label for="gamma">Gamma: @(Math.Round(display.Gamma, 2))</label><br />
-                    <UISlider Name="gamma" Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)" />
-                </div>
-                <div title="Used with images that have transparency">
-                    <label for="background_color">Background Color: @display.BackgroundColorHex</label><br />
-                    <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColorHex">
-                </div>
-                <div>
-                    <LEDMatrix Data="display.DrawnData" />
-                </div>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0">
+            <div style="width: 100%;">
+                <RadzenMenu>
+                    <RadzenMenuItem title="Connect MI Matrix Display" Text="Connect" Icon="add" Click="@(() => ConnectClick())" />
+                </RadzenMenu>
             </div>
-        }
+        </RadzenStack>
+    </div>
+    <div>
+        <RadzenTabs RenderMode="TabRenderMode.Client" >
+            <Tabs>
+                @foreach(var display in DisplayService.Displays)
+                {
+                    <RadzenTabsItem Text="@display.DeviceHexId"  >
+                        <MatrixDisplayControl display="@display" />
+                    </RadzenTabsItem>
+                }
+                <RadzenTabsItem Text="Test">
+                    <div>
+                        <select @onchange=SelectDisplay_OnChange style="min-width: 23rem;">
+                            <option selected="@(_selectedDisplayDeviceIdHex == "")" value="">None</option>
+                            @foreach (var display in DisplayService.Displays)
+                            {
+                                <option selected="@(_selectedDisplayDeviceIdHex == display.DeviceHexId)" value="@display.DeviceHexId">@display.DeviceHexId</option>
+                            }
+                        </select>
+                        <button disabled="@(SelectedDisplay == null)" @onclick=Send>Send</button>
+                    </div>
+                    <div>
+                        <textarea @bind=_textArea cols="50" rows="10"></textarea>
+                    </div>
+                    <div>
+                        Status: @_testStatus
+                    </div>
+                </RadzenTabsItem>
+            </Tabs>
+        </RadzenTabs>
     </div>
 </div>
 
@@ -54,6 +56,45 @@
 
     string bleState = "";
     bool isWebBluetoothEnabled = false;
+
+    string _selectedDisplayDeviceIdHex = "";
+
+    MIMatrixDisplay? SelectedDisplay;
+
+    string _textArea = "";
+    string _testStatus = "";
+
+    void SelectDisplay_OnChange(ChangeEventArgs args)
+    {
+        var deviceIdHex = args.Value as string;
+        var selectedDisplay = DisplayService.Displays.FirstOrDefault(o => o.DeviceHexId == deviceIdHex);
+        SelectedDisplay = selectedDisplay;
+        JS.Log("SelectedDisplay", SelectedDisplay?.DeviceHexId);
+        StateHasChanged();
+    }
+
+    async Task Send()
+    {
+        try
+        {
+            if (SelectedDisplay == null || SelectedDisplay.LEDCharacteristic == null) return;
+            var dataChunks = _textArea.Trim().Replace(" ", "").Replace("\r\n", "\n").Replace("\r", "\n").Split("\n", StringSplitOptions.RemoveEmptyEntries).Select(o => Convert.FromHexString(o));
+            var totalBytes = dataChunks.Sum(o => o.Length);
+            _testStatus = $"Sending {totalBytes} bytes";
+            StateHasChanged();
+            foreach (var dataChunk in dataChunks)
+            {
+                await SelectedDisplay.LEDCharacteristic.WriteValueWithoutResponse(dataChunk);
+            }
+            JS.Log("Send", SelectedDisplay?.DeviceHexId, _textArea);
+            _testStatus = $"Sent {totalBytes} bytes";
+        }
+        catch (Exception ex)
+        {
+            _testStatus = $"Failed: {ex.Message}";
+        }
+        StateHasChanged();
+    }
 
     void Display_OnStateChanged(MIMatrixDisplay display)
     {
@@ -69,9 +110,9 @@
         display.OnStateChanged -= Display_OnStateChanged;
         StateHasChanged();
     }
-    async Task LoadPenguinImage(MIMatrixDisplay display)
+    async Task LoadPenguinImage(MIMatrixDisplay display, bool save)
     {
-        await display.LoadImageFromURL("pixelart/penguin_16.png");
+        await display.LoadImageFromURL("pixelart/penguin_16.png", save);
     }
     protected override void OnAfterRender(bool firstRender)
     {

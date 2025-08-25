@@ -1,0 +1,50 @@
+﻿@using SpawnDev.MatrixLEDDisplay
+<div>
+    <div>
+        <RadzenMenu>
+            <RadzenMenuItem Icon="remove" title="Disconnect" Click=@(() => DisplayService.RemoveDisplay(display)) />
+            <RadzenMenuItem Icon="transition_dissolve" title="Test pattern" disabled="@(!display.Connected)" Click=@(() => display.SendTestPicture(false)) />
+            <RadzenMenuItem Icon="image" title="Test image" disabled="@(!display.Connected)" Click=@(() => LoadPenguinImage(display, false)) />
+            <RadzenMenuItem Icon="file_open" title="Load image file" disabled="@(!display.Connected)" Click=@(() => display.SelectAndLoadImage(false)) />
+            <RadzenMenuItem Icon="save" title="Save to display" disabled="@(!display.Connected)" Click=@(() => display.SavePicture()) />
+            <RadzenMenuItem Icon="replay" title="Reset" disabled="@(!display.Connected)" Click=@(() => display.Reset()) />
+            <RadzenMenuItem Icon="power_off" title="Power off" disabled="@(!display.Connected)" Click=@(() => display.Off()) />
+            <RadzenMenuItem Icon="power" title="Power on" disabled="@(!display.Connected)" Click=@(() => display.On()) />
+            <RadzenMenuItem Icon="slideshow" title="Slideshow mode" disabled="@(!display.Connected)" Click=@(() => display.SlideShowMode()) />
+        </RadzenMenu>
+    </div>
+    <div>
+        <div title="Matrix display gamma correction">
+            <label for="gamma">Gamma: @(Math.Round(display.Gamma, 2))</label><br />
+            <UISlider Name="gamma" Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)" />
+        </div>
+        <div title="Used with images that have transparency">
+            <label for="background_color">Background Color: @display.BackgroundColorHex</label><br />
+            <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColorHex">
+        </div>
+        <div>
+            <LEDMatrix Data="display.DrawnData" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject]
+    BlazorJSRuntime JS { get; set; } = default!;
+
+    [Inject]
+    MatrixLEDDisplayService DisplayService { get; set; } = default!;
+
+    [Parameter]
+    public MIMatrixDisplay display { get; set; }
+
+    void ColorPicker(ChangeEventArgs args, MIMatrixDisplay display)
+    {
+        var newColor = args.Value as string;
+        display.BackgroundColorHex = newColor!;
+    }
+    async Task LoadPenguinImage(MIMatrixDisplay display, bool save)
+    {
+        await display.LoadImageFromURL("pixelart/penguin_16.png", save);
+    }
+}

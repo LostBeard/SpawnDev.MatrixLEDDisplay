@@ -4,8 +4,6 @@
 
 <SpawnDev.MatrixLEDDisplay.Demo.Layout.RadzenThemeContainer Theme="material-dark" />
 
-<link rel="stylesheet" href="css/radzen-tweak.css" />
-
 <RadzenComponents />
 <RadzenLayout Style="grid-template-columns: auto 1fr auto; grid-template-areas: 'rz-header rz-header rz-header' 'rz-sidebar rz-body rz-right-sidebar'">
     <RadzenHeader>
@@ -23,18 +21,6 @@
     <RadzenSidebar @bind-Expanded="@leftSidebarExpanded" Responsive="true">
         <RadzenPanelMenu>
             <RadzenPanelMenuItem Text="Home" Icon="home" Path="" />
-@*             <RadzenPanelMenuItem Text="2D to 2D+Z" Icon="tv" Path="DepthFrom2D" />
-            <RadzenPanelMenuItem Text="2D to Anaglyph" Icon="3d_rotation" Path="AnaglyphImageDemo" />
-            <RadzenPanelMenuItem Text="Text To Speech" Icon="3d_rotation" Path="TextToSpeechClient" />
-            <RadzenPanelMenuItem Text="Keypoint Detection" Icon="grain" Path="KeypointDetectionDemo" />
-            <RadzenPanelMenuItem Text="Realtime 2D to 2D+Z" Icon="grain" Path="RealTime2DZ" />
-            <RadzenPanelMenuItem Text="Webcam 2D to 3D" Icon="grain" Path="RealTime2Dto3D" />
-            <RadzenPanelMenuItem Text="Video 2D to 3D" Icon="grain" Path="RealTimeVideo2Dto3D" /> *@
-            
-
-            <!-- <RadzenPanelMenuItem Text="Folder Convert" Icon="folder" Path="FolderConvert" /> -->
-
-
             <RadzenPanelMenuItem Text="GitHub Repo" Icon="code" Path="https://github.com/LostBeard/SpawnDev.MatrixLEDDisplay" Target="_blank" />
             <RadzenPanelMenuItem Text="Todd@SpawnDev.com" Icon="mail" Path="mailto:todd@spawndev.com" Target="_blank" />
         </RadzenPanelMenu>
