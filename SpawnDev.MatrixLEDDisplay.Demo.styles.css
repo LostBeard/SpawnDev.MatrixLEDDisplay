@@ -117,6 +117,10 @@ main[b-54sc4du38x] {
         padding-right: 1.5rem !important;
     }
 }
+/* /Pages/MatrixDisplayControl.razor.rz.scp.css */
+.display-control[b-pt1ez207rp]  i {
+    margin: 0;
+}
 /* /UI/UIButton.razor.rz.scp.css */
 button[b-322l7xghr8] {
     padding: 4px 2px 2px 2px;
