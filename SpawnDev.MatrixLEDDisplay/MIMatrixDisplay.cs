@@ -386,7 +386,7 @@ namespace SpawnDev.MatrixLEDDisplay
                     SlideShowFrames.Clear();
                     SourceData.Clear();
                     SentImages.Clear();
-                    SourceIsSlideShow = false;
+                    SourceIsSlideShow = true;
                     SourceData.AddRange(images);
                     _save = save;
                     var staticWriteEnabled = false;
