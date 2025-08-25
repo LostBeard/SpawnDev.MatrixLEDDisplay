@@ -1,4 +1,7 @@
-﻿@using SpawnDev.MatrixLEDDisplay
+﻿@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.Formats.Gif
+@using SixLabors.ImageSharp.PixelFormats
+@using SpawnDev.MatrixLEDDisplay
 <div class="display-control">
     <div>
         <RadzenMenu>
@@ -11,6 +14,7 @@
             <RadzenMenuItem Icon="power_off" title="Power off" disabled="@(!display.Connected)" Click=@(() => display.PowerOff()) />
             <RadzenMenuItem Icon="power" title="Power on" disabled="@(!display.Connected)" Click=@(() => display.PowerOn()) />
             <RadzenMenuItem Icon="slideshow" title="Slideshow mode" disabled="@(!display.Connected)" Click=@(() => display.StartSlideShowMode()) />
+            @* <RadzenMenuItem Icon="dangerous" title="Slideshow mode" disabled="@(!display.Connected)" Click=@(() => display.SendTestSlideShow()) /> *@
         </RadzenMenu>
     </div>
     <div>
@@ -19,8 +23,8 @@
             <UISlider Name="gamma" Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)" />
         </div>
         <div title="Used with images that have transparency">
-            <label for="background_color">Background: @display.BackgroundColorHex</label>
-            <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColorHex">
+            <label for="background_color">Background: @display.BackgroundColor.HexColor</label>
+            <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColor.HexColor">
         </div>
         <div>
             <LEDMatrix Data="display.DrawnData" />
@@ -41,10 +45,12 @@
     void ColorPicker(ChangeEventArgs args, MIMatrixDisplay display)
     {
         var newColor = args.Value as string;
-        display.BackgroundColorHex = newColor!;
+        display.BackgroundColor.HexColor = newColor!;
     }
     async Task LoadPenguinImage(MIMatrixDisplay display, bool save)
     {
         await display.LoadImageFromURL("pixelart/penguin_16.png", save);
     }
+
+
 }

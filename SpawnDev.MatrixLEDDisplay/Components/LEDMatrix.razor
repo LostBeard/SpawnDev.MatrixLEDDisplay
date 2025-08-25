@@ -1,5 +1,6 @@
 ﻿@using SpawnDev.BlazorJS
 @using SpawnDev.BlazorJS.JSObjects
+@using SpawnDev.MatrixLEDDisplay.ImageTools
 
 <div style="@Style">
     <canvas style="border: 1px solid grey;" @ref=_canvasRef></canvas>
@@ -13,7 +14,7 @@
     public string Style { get; set; } = "";
 
     [Parameter]
-    public (byte r, byte g, byte b)[] Data { get; set; } = new (byte r, byte g, byte b)[256];
+    public RGBImage Data { get; set; } = new RGBImage(16, 16);
 
     ElementReference _canvasRef;
 
@@ -31,48 +32,22 @@
 
     void DrawData()
     {
-        for (var y = 0; y < _pixelHeight; y++)
+        var width = Data.Width * _blockSize;
+        var height = Data.Height * _blockSize;
+        _canvas!.Width = width;
+        _canvas.Height = height;
+        Data.ForEachXY((x, y) =>
         {
-            for (var x = 0; x < _pixelWidth; x++)
-            {
-                var i = y * _pixelWidth + x;
-                var color = Data[i];
-                SetColor(x, y, color);
-            }
-        }
-    }
-    void SetColor(int x, int y, (byte r, byte g, byte b) color)
-    {
-        if (_ctx == null) return;
-        var i = y * _pixelWidth + x;
-        x = x * _blockSize;
-        y = y * _blockSize;
-        var x1 = x + _blockSize;
-        var y1 = y + _blockSize;
-        Data[i] = color;
-        var fillColor = Convert.ToHexString(new[] { color.r, color.g, color.b });
-        _ctx.FillStyle = $"#{fillColor}";
-        _ctx.FillRect(x, y, _blockSize, _blockSize);
-        var strokeColor = Convert.ToHexString(new byte[] { 0, 0, 0, 128 });
-        _ctx.StrokeStyle = $"#{strokeColor}";
-        _ctx.StrokeRect(x, y, _blockSize, _blockSize);
-    }
-    (byte r, byte g, byte b)[] CreatePicture()
-    {
-        var n = 1;
-        var ret = new (byte r, byte g, byte b)[256];
-        for (var y = 0; y < _pixelHeight; y++)
-        {
-            for (var x = 0; x < _pixelWidth; x++)
-            {
-                var r = x * 16;
-                var g = y * 16;
-                var b = n * 255;
-                var i = y * _pixelWidth + x;
-                ret[i] = ((byte)r, (byte)g, (byte)b);
-            }
-        }
-        return ret;
+            var color = Data[x, y];
+            var i = y * _pixelWidth + x;
+            var x1 = x * _blockSize;
+            var y1 = y * _blockSize;
+            _ctx!.FillStyle = color.HexColor;
+            _ctx.FillRect(x1, y1, _blockSize, _blockSize);
+            var strokeColor = Convert.ToHexString(new byte[] { 0, 0, 0, 128 });
+            _ctx.StrokeStyle = $"#{strokeColor}";
+            _ctx.StrokeRect(x1, y1, _blockSize, _blockSize);
+        });
     }
     protected override void OnAfterRender(bool firstRender)
     {
@@ -84,7 +59,6 @@
             _canvasSize = (int)(_blockSize * _pixelWidth); // 16 blocks + 1 pixel border between each block
             _canvas.Width = _canvasSize;
             _canvas.Height = _canvasSize;
-            //Data = CreatePicture();
         }
         DrawData();
     }

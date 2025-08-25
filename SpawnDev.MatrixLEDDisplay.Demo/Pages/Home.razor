@@ -137,7 +137,7 @@
     void ColorPicker(ChangeEventArgs args, MIMatrixDisplay display)
     {
         var newColor = args.Value as string;
-        display.BackgroundColorHex = newColor!;
+        display.BackgroundColor.HexColor = newColor!;
     }
     bool _connecting = false;
     async Task ConnectClick()
