@@ -156,7 +156,7 @@ namespace SpawnDev.MatrixLEDDisplay
                 _ = Resend();
             }
         }
-        RGBPixel _backgroundColor = (194, 136, 36);
+        RGBPixel _backgroundColor = (24, 16, 8);
         /// <summary>
         /// This color will be used as the background color for images with transparency.
         /// </summary>
@@ -629,7 +629,7 @@ namespace SpawnDev.MatrixLEDDisplay
             if (!SourceData.Any()) return;
             if (SourceIsSlideShow)
             {
-                await SendSlideShow(SourceData, _save);
+                await SendSlideShow(SourceData.ToList(), _save);
             }
             else
             {
@@ -794,49 +794,6 @@ namespace SpawnDev.MatrixLEDDisplay
                 SetBusy(false);
             }
         }
-        //private async Task SendSlideShowImage(byte index, byte count, bool save, RGBAImage imageData)
-        //{
-        //    if (LEDCharacteristic == null) return;
-        //    if (imageData.Width != 16 || imageData.Height != 16) throw new ArgumentOutOfRangeException("Image must be 16x16 pixels");
-        //    SetBusy(true);
-        //    try
-        //    {
-        //        // process transparency
-        //        var DrawnData = imageData.ToRGBImage(BackgroundColor);
-        //        // process gamma and send
-        //        var gammaCorrection = 1d / Gamma;
-        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteEnable(count));
-        //        await Task.Delay(5);
-        //        for (int blockIndex = 0; blockIndex < 8; blockIndex++)
-        //        {
-        //            var blockData = new byte[96];
-        //            for (var i = 0; i < 32; i++)
-        //            {
-        //                var pixelIndex = blockIndex * 32 + i;
-        //                var srcPixel = DrawnData[pixelIndex];
-        //                var r = srcPixel.R;
-        //                var g = srcPixel.G;
-        //                var b = srcPixel.B;
-        //                blockData[i * 3] = GammaCorrect(r, gammaCorrection);     // Red
-        //                blockData[i * 3 + 1] = GammaCorrect(g, gammaCorrection); // Green
-        //                blockData[i * 3 + 2] = GammaCorrect(b, gammaCorrection); // Blue
-        //            }
-        //            await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteChunk(index, (byte)(blockIndex + 1), blockData));
-        //            await Task.Delay(5);
-        //        }
-        //        if (count == index && save)
-        //        {
-        //            await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowMarker);
-        //            await Task.Delay(5);
-        //        }
-        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteDisable(count));
-        //        await Task.Delay(5);
-        //    }
-        //    finally
-        //    {
-        //        SetBusy(false);
-        //    }
-        //}
         /// <summary>
         /// Disconnect and release resources
         /// </summary>
