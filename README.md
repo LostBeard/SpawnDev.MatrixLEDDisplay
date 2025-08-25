@@ -1,7 +1,10 @@
 # SpawnDev.MatrixLEDDisplay
 Blazor WebAssembly code and demo app for communicating with the "Matrix LED Display" by Merkury Innovations, aka "MI Matrix Display". 
 
-[Demo Web App](https://lostbeard.github.io/SpawnDev.MatrixLEDDisplay/)
+## Web app
+- [MI Matrix Display Web App](https://lostbeard.github.io/SpawnDev.MatrixLEDDisplay/)  
+- Display `.jpg`, `.png`, or `.gif` images on 16x16 LED display using your web browser and Bluetooth.
+- Animated `.gif` images are supported (limited to 8 frames.)
 
 ![Matrix LED Display](https://raw.githubusercontent.com/LostBeard/SpawnDev.MatrixLEDDisplay/master/SpawnDev.MatrixLEDDisplay.Demo/wwwroot/mi-matrix-display-400x334.png)
 
@@ -25,9 +28,6 @@ So if you bought one of these cool displays and want an alternative to the defau
 ## References
 - Awesome protocol work: [offe/mi-led-display](https://github.com/offe/mi-led-display)
 
-## WIP
-Created 2025-08-17. Current version allows connecting to the display and drawing a spread of colors.
-
 ## Nerd stuff
 From Chrome Bluetooth Devices  
 - chrome://bluetooth-internals/#devices  
@@ -41,9 +41,3 @@ Services:
     - Descriptors:  
       - 00002902-0000-1000-8000-00805f9b34fb  
 - 0000af30-0000-1000-8000-00805f9b34fb 
-
-### Todo
-- Add library methods for common tasks.
-- Live drawing canvas
-- Animated images
-- Generative AI images
