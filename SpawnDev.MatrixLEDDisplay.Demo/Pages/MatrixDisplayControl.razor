@@ -2,32 +2,32 @@
 @using SixLabors.ImageSharp.Formats.Gif
 @using SixLabors.ImageSharp.PixelFormats
 @using SpawnDev.MatrixLEDDisplay
+@implements IDisposable
+
 <div class="display-control">
     <div>
         <RadzenMenu>
-            <RadzenMenuItem Icon="close" title="Disconnect" Click=@(() => DisplayService.RemoveDisplay(display)) />
-            <RadzenMenuItem Icon="transition_dissolve" title="Test pattern" disabled="@(!display.Connected)" Click=@(() => display.SendTestPicture(false)) />
-            <RadzenMenuItem Icon="image" title="Test image" disabled="@(!display.Connected)" Click=@(() => LoadPenguinImage(display, false)) />
-            <RadzenMenuItem Icon="file_open" title="Load image file" disabled="@(!display.Connected)" Click=@(() => display.SelectAndLoadImage(false)) />
-            <RadzenMenuItem Icon="save" title="Save to display" disabled="@(!display.Connected)" Click=@(() => display.SavePicture()) />
-            <RadzenMenuItem Icon="replay" title="Reset" disabled="@(!display.Connected)" Click=@(() => display.Reset()) />
-            <RadzenMenuItem Icon="power_off" title="Power off" disabled="@(!display.Connected)" Click=@(() => display.PowerOff()) />
-            <RadzenMenuItem Icon="power" title="Power on" disabled="@(!display.Connected)" Click=@(() => display.PowerOn()) />
-            <RadzenMenuItem Icon="slideshow" title="Slideshow mode" disabled="@(!display.Connected)" Click=@(() => display.StartSlideShowMode()) />
-            @* <RadzenMenuItem Icon="dangerous" title="Slideshow mode" disabled="@(!display.Connected)" Click=@(() => display.SendTestSlideShow()) /> *@
+            <RadzenMenuItem Icon="close" disabled="@(Busy)" title="Disconnect" Click=@(() => DisplayService.RemoveDisplay(Display)) />
+            @* <RadzenMenuItem Icon="transition_dissolve" title="Test pattern" disabled="@(!display.Connected)" Click=@(() => display.SendTestPicture(true)) />
+            <RadzenMenuItem Icon="image" title="Test image" disabled="@(!display.Connected)" Click=@(() => LoadPenguinImage(display, true)) /> *@
+            <RadzenMenuItem Icon="file_open" title="Load image file" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.SelectAndLoadImage(true)) />
+            <RadzenMenuItem Icon="replay" title="Reset" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.Reset()) />
+            <RadzenMenuItem Icon="power_off" title="Power off" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.PowerOff()) />
+            <RadzenMenuItem Icon="power" title="Power on" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.PowerOn()) />
+            @* <RadzenMenuItem Icon="slideshow" title="Slideshow mode" disabled="@(!display.Connected)" Click=@(() => display.StartSlideShowMode()) /> *@
         </RadzenMenu>
     </div>
     <div>
         <div title="Matrix display gamma correction">
-            <label for="gamma">Gamma: @(Math.Round(display.Gamma, 2))</label>
-            <UISlider Name="gamma" Min="0" Max="1" Value=@display.Gamma Change="@((v) => display.Gamma = v)" />
+            <label for="gamma">Gamma: @(Math.Round(Display.Gamma, 2))</label>
+            <UISlider Disabled="@(!Display.Connected || Busy)" Name="gamma" Min="0" Max="1" Value=@Display.Gamma Change="@((v) => Display.Gamma = v)" />
         </div>
         <div title="Used with images that have transparency">
-            <label for="background_color">Background: @display.BackgroundColor.HexColor</label>
-            <input name="background_color" type="color" @onchange="@(e => ColorPicker(e, display))" value="@display.BackgroundColor.HexColor">
+            <label for="background_color">Background: @Display.BackgroundColor.HexColor</label>
+            <input disabled="@(!Display.Connected || Busy)" name="background_color" type="color" @onchange="@(e => ColorPicker(e))" value="@Display.BackgroundColor.HexColor">
         </div>
         <div>
-            <LEDMatrix Data="display.DrawnData" />
+            <LEDMatrix Display="Display" />
         </div>
     </div>
 </div>
@@ -40,17 +40,42 @@
     MatrixLEDDisplayService DisplayService { get; set; } = default!;
 
     [Parameter]
-    public MIMatrixDisplay display { get; set; }
+    public MIMatrixDisplay Display { get; set; }
 
-    void ColorPicker(ChangeEventArgs args, MIMatrixDisplay display)
+    bool Busy => Display?.Busy ?? false;
+
+    MIMatrixDisplay? _Display;
+    void ColorPicker(ChangeEventArgs args)
     {
         var newColor = args.Value as string;
-        display.BackgroundColor.HexColor = newColor!;
+        Display.BackgroundColor.HexColor = newColor!;
+        _ = Display.Resend();
     }
-    async Task LoadPenguinImage(MIMatrixDisplay display, bool save)
+    void DetachDisplayEvents()
     {
-        await display.LoadImageFromURL("pixelart/penguin_16.png", save);
+        if (_Display == null) return;
+        _Display.OnStateChanged -= _Display_OnStateHasChanged;
+        _Display = null;
     }
-
-
+    void _Display_OnStateHasChanged(MIMatrixDisplay display)
+    {
+        StateHasChanged();
+    }
+    bool _attached = false;
+    protected override void OnParametersSet()
+    {
+        if (_Display != Display)
+        {
+            DetachDisplayEvents();
+            _Display = Display;
+            if (_Display != null)
+            {
+                _Display.OnStateChanged -= _Display_OnStateHasChanged;
+            }
+        }
+    }
+    public void Dispose()
+    {
+        DetachDisplayEvents();
+    }
 }

@@ -153,7 +153,7 @@ namespace SpawnDev.MatrixLEDDisplay
             {
                 if (_gamma == value) return;
                 _gamma = value;
-                _ = SendPicture();
+                _ = Resend();
             }
         }
         RGBPixel _backgroundColor = (194, 136, 36);
@@ -167,8 +167,12 @@ namespace SpawnDev.MatrixLEDDisplay
             {
                 if (_backgroundColor == value) return;
                 _backgroundColor = value;
-                _ = SendPicture();
+                _ = Resend();
             }
+        }
+        public RGBImage GetFrame(int i)
+        {
+            return i >= 0 && i < SentImages.Count ? SentImages.ElementAtOrDefault(i): new RGBImage(16, 16);
         }
         /// <summary>
         /// Paired Bluetooth device id in base 64 format (could change.) This appears to be generated when the device is paired and may change is re-paired.
@@ -285,7 +289,11 @@ namespace SpawnDev.MatrixLEDDisplay
         public async Task Reset()
         {
             if (LEDCharacteristic == null) return;
-            Data = new RGBAImage(16, 16);
+            SourceData.Clear();
+            SentImages.Clear();
+            SlideShowFrames.Clear();
+            SourceIsSlideShow = false;
+            _save = false;
             await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
         }
         public async Task PowerOff()
@@ -311,34 +319,32 @@ namespace SpawnDev.MatrixLEDDisplay
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
             {
-                var files = await FilePicker.ShowOpenFilePicker("", false);
-                if (files == null || files.Length == 0) return;
-                var file = files[0];
-                if (file.Name.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                SetBusy(true);
+                try
                 {
-                    var gifBytes = await file.ArrayBuffer().UsingAsync(async o => (await o).ReadBytes());
-                    var frames = await GifHelper.GetGIFFrames(gifBytes, 16, 16);
-
-                    await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
-                    await Task.Delay(500);
-                    await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
-                    //await Task.Delay(50);
-                    //await SendSlideShow(frames, false);
-                    await Task.Delay(500);
-                    await SendSlideShow(frames, true);
-                    await Task.Delay(500);
-
-                    await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
-                    await Task.Delay(50);
-                    //await SendTempImage(frames[0], save);
+                    var files = await FilePicker.ShowOpenFilePicker("image/*", false);
+                    if (files == null || files.Length == 0) return;
+                    var file = files[0];
+                    if (file.Name.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var gifBytes = await file.ArrayBuffer().UsingAsync(async o => (await o).ReadBytes());
+                        var frames = await GifHelper.GetGIFFrames(gifBytes, 16, 16);
+                        Console.WriteLine($"frames: {frames.Count}");
+                        await SendSlideShow(frames, save);
+                        await Task.Delay(500);
+                    }
+                    else
+                    {
+                        var imageObjectUrl = URL.CreateObjectURL(file);
+                        if (string.IsNullOrEmpty(imageObjectUrl)) return;
+                        using var image = await HTMLImageElement.CreateFromImageAsync(imageObjectUrl);
+                        URL.RevokeObjectURL(imageObjectUrl);
+                        await SendImage(image, save);
+                    }
                 }
-                else
+                finally
                 {
-                    var imageObjectUrl = URL.CreateObjectURL(file);
-                    if (string.IsNullOrEmpty(imageObjectUrl)) return;
-                    using var image = await HTMLImageElement.CreateFromImageAsync(imageObjectUrl);
-                    URL.RevokeObjectURL(imageObjectUrl);
-                    await SendPicture(image, save);
+                    SetBusy(false);
                 }
             }
         }
@@ -352,7 +358,7 @@ namespace SpawnDev.MatrixLEDDisplay
             {
                 if (string.IsNullOrEmpty(url)) return;
                 using var image = await HTMLImageElement.CreateFromImageAsync(url);
-                await SendPicture(image, save);
+                await SendImage(image, save);
             }
         }
         /// <summary>
@@ -365,75 +371,99 @@ namespace SpawnDev.MatrixLEDDisplay
             {
                 //
                 var imageData = CreateTestPicture(1);
-                await SendTempImage(imageData, save);
+                await SendImage(imageData, save);
             }
         }
-        public async Task SendSlideShow(List<RGBAImage> images, bool save)
+        public int SlideShowFrameCount => SentImages.Count;
+        List<(int imageIndex, int sourceI)> SlideShowFrames = new List<(int imageIndex, int sourceI)>();
+        public async Task SendSlideShow(List<RGBAImage> images, bool save = false)
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
             {
-                //
-                //await LEDCharacteristic.WriteValueWithoutResponse(Command.Commit);
-                //await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
-                //await Task.Delay(50);
-                var staticWriteEnabled = false;
-                if (save)
+                SetBusy(true);
+                try
                 {
-                    staticWriteEnabled = true;
-                    await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteEnable);
+                    SlideShowFrames.Clear();
+                    SourceData.Clear();
+                    SentImages.Clear();
+                    SourceIsSlideShow = false;
+                    SourceData.AddRange(images);
+                    _save = save;
+                    var staticWriteEnabled = false;
+                    if (save)
+                    {
+                        staticWriteEnabled = true;
+
+                        await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
+                        await Task.Delay(500);
+
+                        await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteEnable);
+                        await Task.Delay(50);
+                    }
+                    await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
+                    await Task.Delay(500);
+                    //var count = Math.Min(images.Count, 8);
+                    var count = 8;
+                    var slideShowFrames = new List<(int displayI, int sourceI)>();
+                    for (var i = 0; i < count; i++)
+                    {
+                        var n = i % images.Count;
+                        var imageData = images[n];
+                        var imageDataRGB = imageData.ToRGBImage(BackgroundColor);
+                        SentImages.Add(imageDataRGB);
+                        var imageIndex = (byte)(i + 1);
+                        slideShowFrames.Add((imageIndex, n));
+                        await SendSlideShowImage(imageIndex, (byte)count, save, imageDataRGB);
+                        await Task.Delay(50);
+                        Console.WriteLine($"{i} / {n} / {count}");
+                    }
+                    SlideShowFrames.AddRange(slideShowFrames);
+                    if (staticWriteEnabled)
+                    {
+                        staticWriteEnabled = false;
+                        await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteDisable);
+                        await Task.Delay(50);
+
+                    }
+                    await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
                     await Task.Delay(50);
                 }
-                //var count = Math.Min(images.Count, 8);
-                var count = 8;
-                for (var i = 0; i < count; i++)
+                finally
                 {
-                    var n = i % images.Count;
-                    var imageData = images[n];
-                    var imageIndex = (byte)(i + 1);
-                    await SendSlideShowImage(imageIndex, (byte)count, save, imageData);
-                    await Task.Delay(50);
-                    Console.WriteLine($"{i} / {n} / {count}");
-                }
-                if (staticWriteEnabled)
-                {
-                    staticWriteEnabled = false;
-                    await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteDisable);
-                    await Task.Delay(50);
-                    //await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
-                    //await Task.Delay(50);
+                    SetBusy(false);
                 }
             }
         }
-        /// <summary>
-        /// Sends a simple test slide show
-        /// </summary>
-        /// <returns></returns>
-        public async Task SendTestSlideShow()
-        {
-            if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
-            {
-                //
-                //await LEDCharacteristic.WriteValueWithoutResponse(Command.Commit);
-                //await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
-                //await Task.Delay(5);
-                await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
-                await Task.Delay(50);
-                await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteEnable);
-                await Task.Delay(50);
-                var count = 8;
-                var startPo = 1;
-                for (var i = startPo; i < startPo + count; i++)
-                {
-                    var imageData = CreateTestPicture2((byte)(i - startPo));
-                    await SendSlideShowImage((byte)i, (byte)count, true, imageData);
-                    await Task.Delay(50);
-                }
-                await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteDisable);
-                await Task.Delay(50);
-                await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
-                await Task.Delay(50);
-            }
-        }
+        ///// <summary>
+        ///// Sends a simple test slide show
+        ///// </summary>
+        ///// <returns></returns>
+        //public async Task SendTestSlideShow()
+        //{
+        //    if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
+        //    {
+        //        //
+        //        //await LEDCharacteristic.WriteValueWithoutResponse(Command.Commit);
+        //        //await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
+        //        //await Task.Delay(5);
+        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
+        //        await Task.Delay(50);
+        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteEnable);
+        //        await Task.Delay(50);
+        //        var count = 8;
+        //        var startPo = 1;
+        //        for (var i = startPo; i < startPo + count; i++)
+        //        {
+        //            var imageData = CreateTestPicture2((byte)(i - startPo));
+        //            await SendSlideShowImage((byte)i, (byte)count, true, imageData);
+        //            await Task.Delay(50);
+        //        }
+        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteDisable);
+        //        await Task.Delay(50);
+        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
+        //        await Task.Delay(50);
+        //    }
+        //}
         /// <summary>
         /// Connect to a display
         /// </summary>
@@ -581,67 +611,45 @@ namespace SpawnDev.MatrixLEDDisplay
             }
         }
         /// <summary>
-        /// The last drawn RGB data. If the image had any transparency, the background color was used to create this data when the data was last set.
+        /// Last source sent
         /// </summary>
-        public RGBImage DrawnData { get; private set; } = new RGBImage(16, 16);
+        public List<RGBAImage> SourceData { get; } = new List<RGBAImage>();
+        public List<RGBImage> SentImages { get; } = new List<RGBImage>();
         /// <summary>
-        /// The last set RGBA data. Transparency data has not been processed in this data.
+        /// Set to true when a slideshow is sent
         /// </summary>
-        public RGBAImage Data { get; private set; } = new RGBAImage(16, 16);
-        /// <summary>
-        /// Sends a 16x16 RGBA image to the display.
-        /// </summary>
-        /// <param name="imageDataBytes">A byte array containing RGBA, 4 bytes per pixel, data to be sent to the display after gamma and transparency processing.</param>
-        /// <returns></returns>
-        public Task SendTempImageRGBA(byte[] imageDataBytes, bool save)
-        {
-            var imageData = new (byte r, byte g, byte b, byte a)[256];
-            for (int n = 0; n < imageDataBytes.Length; n += 4)
-            {
-                var i = n / 4;
-                var r = imageDataBytes[n];
-                var g = imageDataBytes[n + 1];
-                var b = imageDataBytes[n + 2];
-                var a = imageDataBytes[n + 3];
-                imageData[i] = (r, g, b, a);
-            }
-            return SendTempImage(imageData, save);
-        }
-        ///// <summary>
-        ///// Sends a 16x16 RGB image to the display.
-        ///// </summary>
-        ///// <param name="imageDataBytes">A byte array containing RGBA, 4 bytes per pixel, data to be sent to the display after gamma and transparency processing.</param>
-        ///// <returns></returns>
-        //public Task SendPictureRGB(byte[] imageDataBytes)
-        //{
-        //    var imageData = new (byte r, byte g, byte b, byte a)[256];
-        //    for (int n = 0; n < imageDataBytes.Length; n += 3)
-        //    {
-        //        var i = n / 4;
-        //        var r = imageDataBytes[n];
-        //        var g = imageDataBytes[n + 1];
-        //        var b = imageDataBytes[n + 2];
-        //        var a = (byte)255;
-        //        imageData[i] = (r, g, b, a);
-        //    }
-        //    return SendTempImage(imageData);
-        //}
+        public bool SourceIsSlideShow { get; private set; }
         bool _save = false;
         /// <summary>
         /// Resends the current picture to the display using the current settings.
         /// </summary>
         /// <returns></returns>
-        public Task SendPicture()
+        public async Task Resend()
         {
-            return SendTempImage(Data, _save);
+            if (!SourceData.Any()) return;
+            if (SourceIsSlideShow)
+            {
+                await SendSlideShow(SourceData, _save);
+            }
+            else
+            {
+                await SendImage(SourceData.First(), _save);
+            }
         }
         /// <summary>
         /// Save the current data as teh static picture.
         /// </summary>
         /// <returns></returns>
-        public Task SavePicture()
+        public async Task SavePicture()
         {
-            return SendTempImage(Data, true);
+            if (SourceIsSlideShow)
+            {
+                await SendSlideShow(SourceData, true);
+            }
+            else
+            {
+                await SendImage(SourceData.First(), true);
+            }
         }
         byte GammaCorrect(byte v, double gammaCorrection)
         {
@@ -654,7 +662,7 @@ namespace SpawnDev.MatrixLEDDisplay
         /// </summary>
         /// <param name="image"></param>
         /// <returns></returns>
-        public async Task SendPicture(HTMLImageElement image, bool save)
+        public async Task SendImage(HTMLImageElement image, bool save = false)
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
             {
@@ -680,142 +688,34 @@ namespace SpawnDev.MatrixLEDDisplay
                 }
                 var imageDataBytes = ctx.GetImageBytes()!;
                 //
-                await SendTempImageRGBA(imageDataBytes, save);
+                await SendImage(new RGBAImage(16, 16, imageDataBytes), save);
             }
-        }
-        ///// <summary>
-        ///// Sends an OffscreenCanvas to the display.
-        ///// </summary>
-        //public async Task SendPicture(OffscreenCanvas image)
-        //{
-        //    if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
-        //    {
-        //        var width = image.Width;
-        //        var height = image.Height;
-        //        using var canvas = new OffscreenCanvas(16, 16);
-        //        using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
-        //        var biggestSide = Math.Max(width, height);
-        //        if (biggestSide <= 16)
-        //        {
-        //            // center
-        //            var x = (int)Math.Round((16 - width) / 2d);
-        //            var y = (int)Math.Round((16 - height) / 2d);
-        //            ctx.DrawImage(image, x, y, width, height);
-        //        }
-        //        else
-        //        {
-        //            // scale down and center
-        //            var scale = 16f / (float)biggestSide;
-        //            var scaleWidth = (int)(width * scale);
-        //            var scaleHeight = (int)(height * scale);
-        //            var x = (int)Math.Round((16 - scaleWidth) / 2d);
-        //            var y = (int)Math.Round((16 - scaleHeight) / 2d);
-        //            ctx.DrawImage(image, x, y, scaleWidth, scaleHeight);
-        //        }
-        //        var imageDataBytes = ctx.GetImageBytes()!;
-        //        //
-        //        await LEDCharacteristic.WriteValueWithoutResponse(initCommand);
-        //        await Task.Delay(2);
-        //        //
-        //        await SendPictureRGBA(imageDataBytes);
-        //    }
-        //}
-        ///// <summary>
-        ///// Sends an HTMLCanvasElement to the display.
-        ///// </summary>
-        //public async Task SendPicture(HTMLCanvasElement image)
-        //{
-        //    if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
-        //    {
-        //        var width = image.Width;
-        //        var height = image.Height;
-        //        using var canvas = new OffscreenCanvas(16, 16);
-        //        using var ctx = canvas.Get2DContext(new CanvasRenderingContext2DSettings { WillReadFrequently = true });
-        //        var biggestSide = Math.Max(width, height);
-        //        if (biggestSide <= 16)
-        //        {
-        //            // center
-        //            var x = (int)Math.Round((16 - width) / 2d);
-        //            var y = (int)Math.Round((16 - height) / 2d);
-        //            ctx.DrawImage(image, x, y, width, height);
-        //        }
-        //        else
-        //        {
-        //            // scale down and center
-        //            var scale = 16f / (float)biggestSide;
-        //            var scaleWidth = (int)(width * scale);
-        //            var scaleHeight = (int)(height * scale);
-        //            var x = (int)Math.Round((16 - scaleWidth) / 2d);
-        //            var y = (int)Math.Round((16 - scaleHeight) / 2d);
-        //            ctx.DrawImage(image, x, y, scaleWidth, scaleHeight);
-        //        }
-        //        var imageDataBytes = ctx.GetImageBytes()!;
-        //        //
-        //        await LEDCharacteristic.WriteValueWithoutResponse(initCommand);
-        //        await Task.Delay(2);
-        //        //
-        //        await SendPictureRGBA(imageDataBytes);
-        //    }
-        //}
-        /// <summary>
-        /// Sends a 16x16 RGB image to the display.
-        /// </summary>
-        /// <param name="imageData"></param>
-        /// <returns></returns>
-        //public Task<bool> SendTempImage((byte r, byte g, byte b)[] imageData)
-        //{
-        //    return SendTempImage(imageData.Select(o => (o.r, o.g, o.b, (byte)255)).ToArray());
-        //}
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="msg">The message to be sent. A message start byte (0xbc) will be prepended and a message end byte (0x55) will be appended to the message.</param>
-        /// <param name="addCrc">
-        /// Some messages, like "Write Slide Show Image Chunk" use a CRC byte as the second to last byte.<br/>
-        /// When true, a simple single byte crc is calculated and added to the message.
-        /// </param>
-        /// <returns></returns>
-        //public async Task SendCommand(byte[] msg)
-        //{
-        //    if (LEDCharacteristic == null) throw new NullReferenceException();
-        //    byte[] fullMessage = Command.Make(msg);
-        //    await LEDCharacteristic.WriteValueWithoutResponse(fullMessage);
-        //}
-        //public async Task SendCommand(List<byte> msg)
-        //{
-        //    if (LEDCharacteristic == null) throw new NullReferenceException();
-        //    byte[] fullMessage = Command.Make(msg.ToArray());
-        //    await LEDCharacteristic.WriteValueWithoutResponse(fullMessage);
-        //}
-        public Task<bool> SendTempImage((byte r, byte g, byte b, byte a)[] imageData, bool commit = true, bool reset = true)
-        {
-            var bytes = imageData.SelectMany(o => new byte[] { o.r, o.g, o.b, o.a }).ToArray();
-            var image = new RGBAImage(16, 16, bytes);
-            return SendTempImage(image, commit, reset);
         }
         /// <summary>
         /// Sends a 16x16 RGBA image to the display.
         /// </summary>
         /// <param name="imageData"></param>
         /// <returns></returns>
-        public async Task<bool> SendTempImage(RGBAImage imageData, bool commit = true, bool reset = true)
+        public async Task SendImage(RGBAImage imageData, bool save = false)
         {
-            if (LEDCharacteristic == null) return false;
-            Data = imageData;
-            // process transparency
-            DrawnData = imageData.ToRGBImage(BackgroundColor);
-            _save = commit;
+            if (LEDCharacteristic == null) return;
+            SlideShowFrames.Clear();
+            SourceData.Clear();
+            SentImages.Clear();
+            SourceIsSlideShow = false;
+            SourceData.Add(imageData);
+            _save = save;
+            var DrawnData = imageData.ToRGBImage(BackgroundColor);
+            SentImages.Add(DrawnData);
             // process gamma and send
+            SetBusy(true);
             try
             {
                 var gammaCorrection = 1d / Gamma;
-                if (commit)
+                if (save)
                 {
-                    if (reset)
-                    {
-                        await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
-                        await Task.Delay(500);
-                    }
+                    await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
+                    await Task.Delay(500);
                     //await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
                     //await Task.Delay(5);
                     await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteEnable);
@@ -842,60 +742,71 @@ namespace SpawnDev.MatrixLEDDisplay
                 }
                 await LEDCharacteristic.WriteValueWithoutResponse(Command.TempImageWriteDisable);
                 await Task.Delay(50);
-                if (commit)
+                if (save)
                 {
                     await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteDisable);
                     await Task.Delay(50);
                 }
-                StateHasChanged();
-                return true;
             }
-            catch
-            { }
-            return false;
+            finally
+            {
+                SetBusy(false);
+            }
         }
-        //public async Task<bool> SendSlideShowImage(byte index, byte[] rgbImageBytes)
+        private async Task SendSlideShowImage(byte index, byte count, bool save, RGBImage imageData)
+        {
+            if (LEDCharacteristic == null) return;
+            if (imageData.Width != 16 || imageData.Height != 16) throw new ArgumentOutOfRangeException("Image must be 16x16 pixels");
+            SetBusy(true);
+            try
+            {
+                // process gamma and send
+                var gammaCorrection = 1d / Gamma;
+                await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteEnable(count));
+                await Task.Delay(5);
+                for (int blockIndex = 0; blockIndex < 8; blockIndex++)
+                {
+                    var blockData = new byte[96];
+                    for (var i = 0; i < 32; i++)
+                    {
+                        var pixelIndex = blockIndex * 32 + i;
+                        var srcPixel = imageData[pixelIndex];
+                        var r = srcPixel.R;
+                        var g = srcPixel.G;
+                        var b = srcPixel.B;
+                        blockData[i * 3] = GammaCorrect(r, gammaCorrection);     // Red
+                        blockData[i * 3 + 1] = GammaCorrect(g, gammaCorrection); // Green
+                        blockData[i * 3 + 2] = GammaCorrect(b, gammaCorrection); // Blue
+                    }
+                    await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteChunk(index, (byte)(blockIndex + 1), blockData));
+                    await Task.Delay(5);
+                }
+                if (count == index && save)
+                {
+                    await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowMarker);
+                    await Task.Delay(5);
+                }
+                await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteDisable(count));
+                await Task.Delay(5);
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+        //private async Task SendSlideShowImage(byte index, byte count, bool save, RGBAImage imageData)
         //{
-        //    if (LEDCharacteristic == null) return false;
-        //    //Data = imageData;
-        //    var chunks = rgbImageBytes.distr
-        //    // process transparency
-        //    for (var i = 0; i < rgbImageBytes.Length; i+=4)
-        //    {
-        //        var srcPixel = imageData[i];
-        //        var r = srcPixel.r;
-        //        var g = srcPixel.g;
-        //        var b = srcPixel.b;
-        //        if (srcPixel.a < 255)
-        //        {
-        //            var an = (double)srcPixel.a / 255d;
-        //            r = (byte)double.Lerp(BackgroundColor.r, r, an);
-        //            g = (byte)double.Lerp(BackgroundColor.g, g, an);
-        //            b = (byte)double.Lerp(BackgroundColor.b, b, an);
-        //        }
-        //        DrawnData[i] = (r, g, b);
-        //    }
-        //    for (var i = 0; i < imageData.Length; i++)
-        //    {
-        //        var srcPixel = imageData[i];
-        //        var r = srcPixel.r;
-        //        var g = srcPixel.g;
-        //        var b = srcPixel.b;
-        //        if (srcPixel.a < 255)
-        //        {
-        //            var an = (double)srcPixel.a / 255d;
-        //            r = (byte)double.Lerp(BackgroundColor.r, r, an);
-        //            g = (byte)double.Lerp(BackgroundColor.g, g, an);
-        //            b = (byte)double.Lerp(BackgroundColor.b, b, an);
-        //        }
-        //        DrawnData[i] = (r, g, b);
-        //    }
-        //    // process gamma and send
+        //    if (LEDCharacteristic == null) return;
+        //    if (imageData.Width != 16 || imageData.Height != 16) throw new ArgumentOutOfRangeException("Image must be 16x16 pixels");
+        //    SetBusy(true);
         //    try
         //    {
+        //        // process transparency
+        //        var DrawnData = imageData.ToRGBImage(BackgroundColor);
+        //        // process gamma and send
         //        var gammaCorrection = 1d / Gamma;
-        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteEnable);
-        //        await Task.Delay(2);
+        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteEnable(count));
+        //        await Task.Delay(5);
         //        for (int blockIndex = 0; blockIndex < 8; blockIndex++)
         //        {
         //            var blockData = new byte[96];
@@ -903,9 +814,9 @@ namespace SpawnDev.MatrixLEDDisplay
         //            {
         //                var pixelIndex = blockIndex * 32 + i;
         //                var srcPixel = DrawnData[pixelIndex];
-        //                var r = srcPixel.r;
-        //                var g = srcPixel.g;
-        //                var b = srcPixel.b;
+        //                var r = srcPixel.R;
+        //                var g = srcPixel.G;
+        //                var b = srcPixel.B;
         //                blockData[i * 3] = GammaCorrect(r, gammaCorrection);     // Red
         //                blockData[i * 3 + 1] = GammaCorrect(g, gammaCorrection); // Green
         //                blockData[i * 3 + 2] = GammaCorrect(b, gammaCorrection); // Blue
@@ -913,61 +824,36 @@ namespace SpawnDev.MatrixLEDDisplay
         //            await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteChunk(index, (byte)(blockIndex + 1), blockData));
         //            await Task.Delay(5);
         //        }
-        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteDisable);
-        //        StateHasChanged();
-        //        return true;
+        //        if (count == index && save)
+        //        {
+        //            await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowMarker);
+        //            await Task.Delay(5);
+        //        }
+        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteDisable(count));
+        //        await Task.Delay(5);
         //    }
-        //    catch
-        //    { }
-        //    return false;
+        //    finally
+        //    {
+        //        SetBusy(false);
+        //    }
         //}
-        //public Task<bool> SendSlideShowImage223(byte index, byte count, bool save, byte[] rgbaPixels)
-        //{
-        //    return SendSlideShowImage(index, count, save, new RGBAImage(16, 16, rgbaPixels));
-        //}
-        public async Task<bool> SendSlideShowImage(byte index, byte count, bool save, RGBAImage imageData)
-        {
-            if (LEDCharacteristic == null) return false;
-            if (imageData.Width != 16 || imageData.Height != 16) throw new ArgumentOutOfRangeException("Image must be 16x16 pixels");
-            // process transparency
-            var DrawnData = imageData.ToRGBImage(BackgroundColor);
-            // process gamma and send
-            var gammaCorrection = 1d / Gamma;
-            await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteEnable(count));
-            await Task.Delay(5);
-            for (int blockIndex = 0; blockIndex < 8; blockIndex++)
-            {
-                var blockData = new byte[96];
-                for (var i = 0; i < 32; i++)
-                {
-                    var pixelIndex = blockIndex * 32 + i;
-                    var srcPixel = DrawnData[pixelIndex];
-                    var r = srcPixel.R;
-                    var g = srcPixel.G;
-                    var b = srcPixel.B;
-                    blockData[i * 3] = GammaCorrect(r, gammaCorrection);     // Red
-                    blockData[i * 3 + 1] = GammaCorrect(g, gammaCorrection); // Green
-                    blockData[i * 3 + 2] = GammaCorrect(b, gammaCorrection); // Blue
-                }
-                await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteChunk(index, (byte)(blockIndex + 1), blockData));
-                await Task.Delay(5);
-            }
-            if (count == index && save)
-            {
-                await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowMarker);
-                await Task.Delay(5);
-            }
-            await LEDCharacteristic.WriteValueWithoutResponse(Command.SlideShowImageWriteDisable(count));
-            await Task.Delay(5);
-            StateHasChanged();
-            return true;
-        }
         /// <summary>
         /// Disconnect and release resources
         /// </summary>
         public void Dispose()
         {
             Disconnect();
+        }
+
+        int _busy = 0;
+        public bool Busy => _busy > 0;
+        void SetBusy(bool busy)
+        {
+            var busyi = busy ? _busy + 1 : _busy - 1;
+            if (busyi < 0) busyi = 0;
+            if (_busy == busyi) return;
+            _busy = busyi;
+            StateHasChanged();
         }
     }
 }

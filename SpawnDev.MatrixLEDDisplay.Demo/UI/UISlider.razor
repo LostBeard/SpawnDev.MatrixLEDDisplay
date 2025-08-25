@@ -1,6 +1,9 @@
-﻿<input @onchange=OnChange style="@Style" name="@Name" type="range" min="@Min" max="@Max" value="@Value" step="@(Step == 0 ? "any" : Step.ToString())" />
+﻿<input disabled="@Disabled" @onchange=OnChange style="@Style" name="@Name" type="range" min="@Min" max="@Max" value="@Value" step="@(Step == 0 ? "any" : Step.ToString())" />
 
 @code {
+    [Parameter]
+    public bool Disabled { get; set; }
+
     [Parameter]
     public double Max { get; set; }
 

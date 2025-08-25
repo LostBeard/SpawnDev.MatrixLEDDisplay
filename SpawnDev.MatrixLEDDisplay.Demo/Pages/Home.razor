@@ -17,12 +17,6 @@
     <div>
         <RadzenTabs RenderMode="TabRenderMode.Client" >
             <Tabs>
-                @foreach(var display in DisplayService.Displays)
-                {
-                    <RadzenTabsItem Text="@display.DeviceHexId"  >
-                        <MatrixDisplayControl display="@display" />
-                    </RadzenTabsItem>
-                }
                 <RadzenTabsItem Text="Test">
                     <div>
                         <select @onchange=SelectDisplay_OnChange style="min-width: 23rem;">
@@ -41,6 +35,12 @@
                         Status: @_testStatus
                     </div>
                 </RadzenTabsItem>
+                @foreach (var display in DisplayService.Displays)
+                {
+                    <RadzenTabsItem Text="@display.DeviceHexId">
+                        <MatrixDisplayControl Display="@display" />
+                    </RadzenTabsItem>
+                }
             </Tabs>
         </RadzenTabs>
     </div>

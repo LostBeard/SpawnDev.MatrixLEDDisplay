@@ -1,9 +1,17 @@
 ﻿@using SpawnDev.BlazorJS
 @using SpawnDev.BlazorJS.JSObjects
 @using SpawnDev.MatrixLEDDisplay.ImageTools
+@using System.Timers
+@using Timer = System.Timers.Timer;
+@implements IDisposable
 
 <div style="@Style">
-    <canvas style="border: 1px solid grey;" @ref=_canvasRef></canvas>
+    <div>
+        <canvas style="border: 1px solid grey;" @ref=_canvasRef></canvas>
+    </div>
+    <div style="@(Display.SourceIsSlideShow && Display.SlideShowFrameCount > 0 ? "" : "display: none;")">
+        @(ImageIndex + 1) / @Display.SlideShowFrameCount
+    </div>
 </div>
 
 @code {
@@ -14,7 +22,9 @@
     public string Style { get; set; } = "";
 
     [Parameter]
-    public RGBImage Data { get; set; } = new RGBImage(16, 16);
+    public MIMatrixDisplay Display { get; set; }
+
+    MIMatrixDisplay? _Display;
 
     ElementReference _canvasRef;
 
@@ -30,16 +40,27 @@
     int _pixelWidth = 16;
     int _pixelHeight = 16;
 
+    Timer _tmr = new Timer();
+    public void Dispose()
+    {
+        _tmr.Enabled = false;
+        _tmr.Dispose();
+        DetachDisplayEvents();
+    }
     void DrawData()
     {
-        var width = Data.Width * _blockSize;
-        var height = Data.Height * _blockSize;
-        _canvas!.Width = width;
-        _canvas.Height = height;
-        Data.ForEachXY((x, y) =>
+        if (_canvas == null || _ctx == null) return;
+        var data = Display.GetFrame(ImageIndex);
+        var width = data.Width * _blockSize;
+        var height = data.Height * _blockSize;
+        if (_canvas.Width != width || _canvas.Height != height)
         {
-            var color = Data[x, y];
-            var i = y * _pixelWidth + x;
+            _canvas.Width = width;
+            _canvas.Height = height;
+        }
+        data.ForEachXY((x, y) =>
+        {
+            var color = data[x, y];
             var x1 = x * _blockSize;
             var y1 = y * _blockSize;
             _ctx!.FillStyle = color.HexColor;
@@ -48,6 +69,36 @@
             _ctx.StrokeStyle = $"#{strokeColor}";
             _ctx.StrokeRect(x1, y1, _blockSize, _blockSize);
         });
+    }
+    void DetachDisplayEvents()
+    {
+        if (_Display == null) return;
+        _Display.OnStateChanged -= _Display_OnStateHasChanged;
+        _Display = null;
+    }
+    void _Display_OnStateHasChanged(MIMatrixDisplay display)
+    {
+        StateHasChanged();
+    }
+    bool _attached = false;
+    protected override void OnParametersSet()
+    {
+        if (_Display != Display)
+        {
+            DetachDisplayEvents();
+            _Display = Display;
+            if (_Display != null)
+            {
+                _Display.OnStateChanged -= _Display_OnStateHasChanged;
+            }
+        }
+    }
+    int ImageIndex => Display.SlideShowFrameCount == 0 ? 0 : _imageIndex % Display.SlideShowFrameCount;
+    int _imageIndex = 0;
+    void timer_elapsed(object? sender, ElapsedEventArgs e)
+    {
+        _imageIndex = _imageIndex == int.MaxValue ? 0 : _imageIndex + 1;
+        StateHasChanged();
     }
     protected override void OnAfterRender(bool firstRender)
     {
@@ -59,6 +110,9 @@
             _canvasSize = (int)(_blockSize * _pixelWidth); // 16 blocks + 1 pixel border between each block
             _canvas.Width = _canvasSize;
             _canvas.Height = _canvasSize;
+            _tmr.Elapsed += timer_elapsed;
+            _tmr.Interval = 650;
+            _tmr.Enabled = true;
         }
         DrawData();
     }
