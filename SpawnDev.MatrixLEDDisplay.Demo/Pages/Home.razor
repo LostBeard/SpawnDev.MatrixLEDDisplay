@@ -1,6 +1,8 @@
 ﻿@page "/"
 @using SpawnDev.BlazorJS
 @using SpawnDev.BlazorJS.JSObjects
+@using SpawnDev.BlazorJS.Toolbox
+@using SpawnDev.MatrixLEDDisplay.Demo.Services
 @implements IAsyncDisposable
 
 <div>
@@ -9,35 +11,22 @@
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0">
             <div style="width: 100%;">
                 <RadzenMenu>
-                    <RadzenMenuItem title="Connect MI Matrix Display" Text="MI Matrix Display" Icon="add" Click="@(() => ConnectClick())" />
+                    <RadzenMenuItem title="Add image(s) to media library" Text="Image" Icon="add" Click="@(() => AddImages())" />
+                    <RadzenMenuItem title="Connect MI Matrix Display" Text="Display" Icon="add" Click="@(() => ConnectClick())" />
                 </RadzenMenu>
             </div>
         </RadzenStack>
     </div>
     <div>
-        <RadzenTabs RenderMode="TabRenderMode.Client" >
+        <RadzenTabs RenderMode="TabRenderMode.Client">
             <Tabs>
-                @* <RadzenTabsItem Text="Test">
-                    <div>
-                        <select @onchange=SelectDisplay_OnChange style="min-width: 23rem;">
-                            <option selected="@(_selectedDisplayDeviceIdHex == "")" value="">None</option>
-                            @foreach (var display in DisplayService.Displays)
-                            {
-                                <option selected="@(_selectedDisplayDeviceIdHex == display.DeviceHexId)" value="@display.DeviceHexId">@display.DeviceHexId</option>
-                            }
-                        </select>
-                        <button disabled="@(SelectedDisplay == null)" @onclick=Send>Send</button>
-                    </div>
-                    <div>
-                        <textarea @bind=_textArea cols="50" rows="10"></textarea>
-                    </div>
-                    <div>
-                        Status: @_testStatus
-                    </div>
-                </RadzenTabsItem> *@
-                @foreach (var display in DisplayService.Displays)
+                <RadzenTabsItem Text="Media Library">
+                    <MediaLibraryViewer />
+                </RadzenTabsItem>
+                @foreach (var display in DisplayService.Displays.Values)
                 {
-                    <RadzenTabsItem Text="@display.DeviceHexId">
+                    var metadata = DisplayService.GetMetaData(display);
+                    <RadzenTabsItem Text="@metadata!.Name">
                         <MatrixDisplayControl Display="@display" />
                     </RadzenTabsItem>
                 }
@@ -48,6 +37,13 @@
 
 @code
 {
+
+    [Inject]
+    MediaLibraryManager MediaLibraryManager { get; set; } = default!;
+
+    [Inject]
+    NotificationService NotificationService { get; set; } = default!;
+
     [Inject]
     BlazorJSRuntime JS { get; set; } = default!;
 
@@ -67,7 +63,7 @@
     void SelectDisplay_OnChange(ChangeEventArgs args)
     {
         var deviceIdHex = args.Value as string;
-        var selectedDisplay = DisplayService.Displays.FirstOrDefault(o => o.DeviceHexId == deviceIdHex);
+        var selectedDisplay = DisplayService.Displays.Values.FirstOrDefault(o => o.DeviceHexId == deviceIdHex);
         SelectedDisplay = selectedDisplay;
         JS.Log("SelectedDisplay", SelectedDisplay?.DeviceHexId);
         StateHasChanged();
@@ -112,7 +108,7 @@
     }
     async Task LoadPenguinImage(MIMatrixDisplay display, bool save)
     {
-        await display.LoadImageFromURL("pixelart/penguin_16.png", save);
+        await display.SendImage("pixelart/penguin_16.png", save);
     }
     protected override void OnAfterRender(bool firstRender)
     {
@@ -140,18 +136,32 @@
         display.BackgroundColor.HexColor = newColor!;
     }
     bool _connecting = false;
+
+    async Task AddImages()
+    {
+        await MediaLibraryManager.ShowImageSelectDialog();
+    }
     async Task ConnectClick()
     {
         if (_connecting || !isWebBluetoothEnabled) return;
         _connecting = true;
         bleState = "Connecting...";
         StateHasChanged();
+        MIMatrixDisplay? display = null;
         try
         {
-            await DisplayService.ConnectDisplay();
+            display = await DisplayService.ConnectDisplay();
         }
         finally
         {
+            if (display == null)
+            {
+                NotificationService.Notify(NotificationSeverity.Warning, "Connect was  cancelled or failed");
+            }
+            else
+            {
+                NotificationService.Notify(NotificationSeverity.Success, "Display  connected");
+            }
             _connecting = false;
             bleState = "Ready";
             StateHasChanged();

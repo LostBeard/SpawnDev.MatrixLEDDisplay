@@ -1,0 +1,36 @@
+﻿@using SpawnDev.MatrixLEDDisplay.Demo.Services
+@implements IDisposable
+
+<div>
+    @foreach (var mediaItem in MediaLibraryManager.MediaItems)
+    {
+        <MediaItem MediaLibraryItem="mediaItem" Style="display: inline-block; padding: 6px;  width: 112px; overflow: hidden;" />
+    }
+</div>
+
+@code {
+    [Inject]
+    MediaLibraryManager MediaLibraryManager { get; set; } = default!;
+
+    bool _beenInit = false;
+    protected override void OnInitialized()
+    {
+        if (!_beenInit)
+        {
+            _beenInit = true;
+            MediaLibraryManager.OnStateChanged += MediaLibraryManager_OnStateChanged;
+        }
+    }
+    void MediaLibraryManager_OnStateChanged()
+    {
+        StateHasChanged();
+    }
+    public void Dispose()
+    {
+        if (_beenInit)
+        {
+            _beenInit = false;
+            MediaLibraryManager.OnStateChanged -= MediaLibraryManager_OnStateChanged;
+        }
+    }
+}

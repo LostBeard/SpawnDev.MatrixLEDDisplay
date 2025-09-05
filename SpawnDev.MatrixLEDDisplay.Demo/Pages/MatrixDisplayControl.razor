@@ -6,11 +6,11 @@
 
 <div class="display-control">
     <div>
-        <RadzenMenu>
+        <RadzenMenu Responsive="false">
             <RadzenMenuItem Icon="close" disabled="@(Busy)" title="Disconnect" Click=@(() => DisplayService.RemoveDisplay(Display)) />
             @* <RadzenMenuItem Icon="transition_dissolve" title="Test pattern" disabled="@(!display.Connected)" Click=@(() => display.SendTestPicture(true)) />
             <RadzenMenuItem Icon="image" title="Test image" disabled="@(!display.Connected)" Click=@(() => LoadPenguinImage(display, true)) /> *@
-            <RadzenMenuItem Icon="file_open" title="Load image file" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.SelectAndLoadImage(true)) />
+            <RadzenMenuItem Icon="file_open" title="Load image file" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.SelectAndSendImage(true)) />
             <RadzenMenuItem Icon="replay" title="Reset" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.Reset()) />
             <RadzenMenuItem Icon="power_off" title="Power off" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.PowerOff()) />
             <RadzenMenuItem Icon="power" title="Power on" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.PowerOn()) />

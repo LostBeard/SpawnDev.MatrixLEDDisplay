@@ -1,0 +1,8 @@
+﻿.media-library-item {
+    background-color: transparent;
+    border-radius: 0.5rem;
+}
+
+    .media-library-item:hover {
+        background-color: #80808080;
+    }

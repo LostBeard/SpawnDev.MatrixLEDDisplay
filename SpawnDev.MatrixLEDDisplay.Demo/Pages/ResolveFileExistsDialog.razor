@@ -1,0 +1,95 @@
+﻿@implements IDisposable
+
+<div>
+    <RadzenStack Gap="1rem">
+        <div style="display: flex; flex-direction: row; justify-content:space-around;">
+            <div style="display: inline-block; padding: 6px;  width: 112px; overflow: hidden;">
+                <div>New file</div>
+                <div>
+                    <img height="100" width="100" src="@newFileUrl" />
+                </div>
+            </div>
+            <div style="display: inline-block; padding: 6px;  width: 112px; overflow: hidden;">
+                <div>Old file</div>
+                <div>
+                    <img height="100" width="100" src="@oldFileUrl" />
+                </div>
+            </div>
+        </div>
+        <div style="height: 4rem; text-align: center;">
+            @NewFile?.Name
+        </div>
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" class="rz-mt-8 rz-mb-4">
+        <RadzenButton Variant=Variant.Outlined Icon="undo" Text="Overwrite" Click=@Overwrite />
+        <RadzenButton Variant=Variant.Outlined Icon="undo" Text="Keep Both" Click=@KeepBoth />
+        <RadzenButton Variant=Variant.Outlined Icon="cancel" Text="Skip" Click="@Skip" />
+    </RadzenStack>
+</div>
+
+@code {
+    [Inject]
+    DialogService DialogService { get; set; } = default!;
+    void Overwrite()
+    {
+        DialogService.Close(HandleExists.Overwrite);
+    }
+    void KeepBoth()
+    {
+        DialogService.Close(HandleExists.KeepBoth);
+    }
+    void Skip()
+    {
+        DialogService.Close(HandleExists.Skip);
+    }
+    public enum HandleExists
+    {
+        Overwrite,
+        KeepBoth,
+        Skip,
+    }
+    string newFileUrl;
+    string oldFileUrl;
+
+    [Parameter]
+    public File NewFile { get; set; }
+
+    [Parameter]
+    public Blob OldFile { get; set; }
+
+    bool beenInit = false;
+
+    protected override void OnInitialized()
+    {
+        if (!beenInit)
+        {
+            beenInit = true;
+            newFileUrl = URL.CreateObjectURL(NewFile);
+            oldFileUrl = URL.CreateObjectURL(OldFile);
+        }
+    }
+    public void Dispose()
+    {
+        if (beenInit)
+        {
+            beenInit = false;
+            URL.RevokeObjectURL(newFileUrl);
+            URL.RevokeObjectURL(oldFileUrl);
+        }
+    }
+    public static async Task<HandleExists> Show(DialogService dialogService, File newFile, Blob oldFile)
+    {
+        HandleExists restoreOptions = await dialogService.OpenAsync<ResolveFileExistsDialog>($"Target exists", new Dictionary<string, object>
+        {
+            { "NewFile", newFile },
+            { "OldFile", oldFile }
+        },
+        new DialogOptions()
+        {
+            CloseDialogOnEsc = false,
+            ShowClose = false,
+            CloseDialogOnOverlayClick = false,
+        });
+        return restoreOptions;
+    }
+}

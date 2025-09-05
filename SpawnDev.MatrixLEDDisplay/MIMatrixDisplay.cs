@@ -3,10 +3,15 @@ using SpawnDev.BlazorJS.JSObjects;
 using SpawnDev.BlazorJS.Toolbox;
 using SpawnDev.MatrixLEDDisplay.ImageTools;
 using System.Runtime.InteropServices;
+using System.Timers;
+using File = SpawnDev.BlazorJS.JSObjects.File;
+using Timer = System.Timers.Timer;
 
 namespace SpawnDev.MatrixLEDDisplay
 {
     // ID: EF:64:12:41:80:A0
+    // Below site has about 42 16x16 pixel art images (non-animated)
+    // https://simplepixelart.com/arts/size-16x16
     /// <summary>
     /// Connects to and controls a Merkury Innovations MI Matrix Display 16x16 LED panel using BLE
     /// </summary>
@@ -88,11 +93,21 @@ namespace SpawnDev.MatrixLEDDisplay
             /// </summary>
             /// <returns></returns>
             public static byte[] SlideShowImageWriteEnable6 { get; } = MakeBC(new byte[] { 0x02, 0xf1, 0x06 });
-
+            /// <summary>
+            /// Slideshow marker (?)
+            /// </summary>
             public static byte[] SlideShowMarker { get; } = MakeBC(new byte[] { 0x02, 0x07, 0x3c });
-
+            /// <summary>
+            /// Slideshow image write enable with variable (?)
+            /// </summary>
+            /// <param name="count"></param>
+            /// <returns></returns>
             public static byte[] SlideShowImageWriteEnable(byte count) => MakeBC(new byte[] { 0x02, 0xf1, count });
-
+            /// <summary>
+            /// Slideshow image write disable with variable (?)
+            /// </summary>
+            /// <param name="count"></param>
+            /// <returns></returns>
             public static byte[] SlideShowImageWriteDisable(byte count) => MakeBC(new byte[] { 0x02, 0xf2, count });
             /// <summary>
             /// Slideshow image write disable
@@ -156,6 +171,10 @@ namespace SpawnDev.MatrixLEDDisplay
                 _ = Resend();
             }
         }
+        /// <summary>
+        /// Returns true if currently busywith the display
+        /// </summary>
+        public bool Busy => _busy > 0;
         RGBPixel _backgroundColor = (24, 16, 8);
         /// <summary>
         /// This color will be used as the background color for images with transparency.
@@ -170,12 +189,17 @@ namespace SpawnDev.MatrixLEDDisplay
                 _ = Resend();
             }
         }
+        /// <summary>
+        /// Gets a specific frame from the last set of sent RGBImages
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
         public RGBImage GetFrame(int i)
         {
-            return i >= 0 && i < SentImages.Count ? SentImages.ElementAtOrDefault(i): new RGBImage(16, 16);
+            return i >= 0 && i < SentImages.Count ? SentImages.ElementAtOrDefault(i) ?? new RGBImage(16, 16) : new RGBImage(16, 16);
         }
         /// <summary>
-        /// Paired Bluetooth device id in base 64 format (could change.) This appears to be generated when the device is paired and may change is re-paired.
+        /// Paired Bluetooth device id in base 64 format (could change.) This appears to be generated when the device is paired and may change if re-paired.
         /// </summary>
         public string? DeviceId { get; private set; }
         /// <summary>
@@ -240,6 +264,8 @@ namespace SpawnDev.MatrixLEDDisplay
         /// Fired when the device's state has changed
         /// </summary>
         public event Action<MIMatrixDisplay> OnStateChanged = default!;
+
+        Timer _reconnectTimer = new Timer();
         /// <summary>
         /// Creates a new instance
         /// </summary>
@@ -247,45 +273,46 @@ namespace SpawnDev.MatrixLEDDisplay
         public MIMatrixDisplay(BlazorJSRuntime js)
         {
             JS = js;
+            _reconnectTimer.Elapsed += _reconnectTimer_Elapsed;
+            _reconnectTimer.Interval = 5000;
         }
+        /// <summary>
+        /// Returns true if connecting
+        /// </summary>
+        public bool Connecting { get; private set; } = false;
+
+        private async void _reconnectTimer_Elapsed(object? sender, ElapsedEventArgs e)
+        {
+            if (!Connected && !Connecting)
+            {
+                try
+                {
+                    await _Connect();
+                    // TODO reconnect to characteristics
+                }
+                catch (Exception ex)
+                {
+                    JS.Log(ex.ToString());
+                    var nmt = true;
+                }
+            }
+        }
+
         /// <summary>
         /// Creates a simple test image
         /// </summary>
         /// <param name="n"></param>
         /// <returns></returns>
-        //public (byte r, byte g, byte b, byte a)[] CreateTestPicture(byte n = 1)
-        //{
-        //    var ret = new (byte r, byte g, byte b, byte a)[256];
-        //    for (var y = 0; y < 16; y++)
-        //    {
-        //        for (var x = 0; x < 16; x++)
-        //        {
-        //            var r = x * 16;
-        //            var g = y * 16;
-        //            var b = n * 255;
-        //            var i = y * 16 + x;
-        //            ret[i] = ((byte)r, (byte)g, (byte)b, (byte)255);
-        //        }
-        //    }
-        //    return ret;
-        //}
         public RGBAImage CreateTestPicture(byte n = 1)
         {
             var ret = new RGBAImage(16, 16);
             ret.ForEachXY((x, y) => ret.Set(x, y, (byte)(x * 16), (byte)(y * 16), (byte)(n * 16), 255));
             return ret;
         }
-        public RGBAImage CreateTestPicture2(byte n)
-        {
-            var ret = new RGBAImage(16, 16);
-            for (var i = 0; i < ret.Length; i++)
-            {
-                var p = ret[i];
-                p.A = 255;
-                p.R = p.G = p.B = i == (int)n ? (byte)255 : (byte)0;
-            }
-            return ret;
-        }
+        /// <summary>
+        /// Reset the display saved data
+        /// </summary>
+        /// <returns></returns>
         public async Task Reset()
         {
             if (LEDCharacteristic == null) return;
@@ -296,16 +323,28 @@ namespace SpawnDev.MatrixLEDDisplay
             _save = false;
             await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
         }
+        /// <summary>
+        /// Power off
+        /// </summary>
+        /// <returns></returns>
         public async Task PowerOff()
         {
             if (LEDCharacteristic == null) return;
             await LEDCharacteristic.WriteValueWithoutResponse(Command.PowerOff);
         }
+        /// <summary>
+        /// Power on
+        /// </summary>
+        /// <returns></returns>
         public async Task PowerOn()
         {
             if (LEDCharacteristic == null) return;
             await LEDCharacteristic.WriteValueWithoutResponse(Command.PowerOn);
         }
+        /// <summary>
+        /// Start slideshow mode
+        /// </summary>
+        /// <returns></returns>
         public async Task StartSlideShowMode()
         {
             if (LEDCharacteristic == null) return;
@@ -315,7 +354,7 @@ namespace SpawnDev.MatrixLEDDisplay
         /// Opens a file picker to select an image that will be loaded onto the display.
         /// </summary>
         /// <returns></returns>
-        public async Task SelectAndLoadImage(bool save)
+        public async Task SelectAndSendImage(bool save = false)
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
             {
@@ -325,22 +364,7 @@ namespace SpawnDev.MatrixLEDDisplay
                     var files = await FilePicker.ShowOpenFilePicker("image/*", false);
                     if (files == null || files.Length == 0) return;
                     var file = files[0];
-                    if (file.Name.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var gifBytes = await file.ArrayBuffer().UsingAsync(async o => (await o).ReadBytes());
-                        var frames = await GifHelper.GetGIFFrames(gifBytes, 16, 16);
-                        Console.WriteLine($"frames: {frames.Count}");
-                        await SendSlideShow(frames, save);
-                        await Task.Delay(500);
-                    }
-                    else
-                    {
-                        var imageObjectUrl = URL.CreateObjectURL(file);
-                        if (string.IsNullOrEmpty(imageObjectUrl)) return;
-                        using var image = await HTMLImageElement.CreateFromImageAsync(imageObjectUrl);
-                        URL.RevokeObjectURL(imageObjectUrl);
-                        await SendImage(image, save);
-                    }
+                    await SendImage(file, save);
                 }
                 finally
                 {
@@ -349,23 +373,61 @@ namespace SpawnDev.MatrixLEDDisplay
             }
         }
         /// <summary>
+        /// Loads an image file to the display. If the image is a gif, it i will be loaded as an animated
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="save"></param>
+        /// <returns></returns>
+        public async Task<bool> SendImage(Blob file, bool save = false)
+        {
+            if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
+            {
+                SetBusy(true);
+                try
+                {
+                    var imageBytes = (await file.ArrayBuffer()).Using(o => o.ReadBytes());
+                    var frames = await ImageHelper.GetImageFrames(imageBytes, 16, 16);
+                    Console.WriteLine($"frames: {frames.Count}");
+                    if (frames.Any())
+                    {
+                        if (frames.Count > 1)
+                        {
+                            await SendSlideShow(frames, save);
+                        }
+                        else
+                        {
+                            await SendImage(frames[0], save);
+                        }
+                        await Task.Delay(500);
+                        return true;
+                    }
+                }
+                finally
+                {
+                    SetBusy(false);
+                }
+            }
+            return false;
+        }
+        /// <summary>
         /// Opens a file picker to select an image that will be loaded onto the display.
         /// </summary>
         /// <returns></returns>
-        public async Task LoadImageFromURL(string url, bool save)
+        public async Task SendImage(string url, bool save = false, FetchOptions? options = null)
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
             {
                 if (string.IsNullOrEmpty(url)) return;
-                using var image = await HTMLImageElement.CreateFromImageAsync(url);
-                await SendImage(image, save);
+                using var resp = options == null ? await JS.Fetch(url) : await JS.Fetch(url, options);
+                using var blob = await resp.Blob();
+                await SendImage(blob, save);
             }
         }
         /// <summary>
         /// Sends a simple test picture to the display
         /// </summary>
         /// <returns></returns>
-        public async Task SendTestPicture(bool save)
+        public async Task SendTestImage(bool save = false)
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
             {
@@ -374,8 +436,17 @@ namespace SpawnDev.MatrixLEDDisplay
                 await SendImage(imageData, save);
             }
         }
+        /// <summary>
+        /// The number of images last sent to the display
+        /// </summary>
         public int SlideShowFrameCount => SentImages.Count;
-        List<(int imageIndex, int sourceI)> SlideShowFrames = new List<(int imageIndex, int sourceI)>();
+        List<(int imageIndex, int sourceI)> SlideShowFrames { get; } = new List<(int imageIndex, int sourceI)>();
+        /// <summary>
+        /// Sends a set of images to the display as a slideshow
+        /// </summary>
+        /// <param name="images"></param>
+        /// <param name="save"></param>
+        /// <returns></returns>
         public async Task SendSlideShow(List<RGBAImage> images, bool save = false)
         {
             if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
@@ -434,46 +505,61 @@ namespace SpawnDev.MatrixLEDDisplay
                 }
             }
         }
-        ///// <summary>
-        ///// Sends a simple test slide show
-        ///// </summary>
-        ///// <returns></returns>
-        //public async Task SendTestSlideShow()
-        //{
-        //    if (BLEServer != null && BLEServer.Connected && BLEService != null && LEDCharacteristic != null)
-        //    {
-        //        //
-        //        //await LEDCharacteristic.WriteValueWithoutResponse(Command.Commit);
-        //        //await LEDCharacteristic.WriteValueWithoutResponse(Command.Reset);
-        //        //await Task.Delay(5);
-        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
-        //        await Task.Delay(50);
-        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteEnable);
-        //        await Task.Delay(50);
-        //        var count = 8;
-        //        var startPo = 1;
-        //        for (var i = startPo; i < startPo + count; i++)
-        //        {
-        //            var imageData = CreateTestPicture2((byte)(i - startPo));
-        //            await SendSlideShowImage((byte)i, (byte)count, true, imageData);
-        //            await Task.Delay(50);
-        //        }
-        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.StaticImageWriteDisable);
-        //        await Task.Delay(50);
-        //        await LEDCharacteristic.WriteValueWithoutResponse(Command.StartSlideShowMode);
-        //        await Task.Delay(50);
-        //    }
-        //}
+
+        async Task<bool> _Connect()
+        {
+            if (BLEServer == null || BLEDevice == null || BLEServer.Connected)
+            {
+                return Connected;
+            }
+            Connecting = true;
+            StateHasChanged();
+            try
+            {
+                //BLEServer = await BLEDevice.GATT!.Connect();
+                await BLEServer.Connect();
+
+                BLEService = await BLEServer.GetPrimaryService(BLEServiceId);
+                // LED characteristic - WriteNoResponse
+                LEDCharacteristic = await BLEService.GetCharacteristic(LEDCharacteristicId);
+                // ? characteristic - Notify
+                NotifyCharacteristic = await BLEService.GetCharacteristic(NotifyCharacteristicId);
+                NotifyCharacteristic.OnCharacteristicValueChanged += SensorCharacteristicFound_OnCharacteristicValueChanged;
+                // NotifyDescriptor - not sure what the 2 byte value that can be read from this means. Only seen as 0x0000
+                NotifyDescriptor = await NotifyCharacteristic.GetDescriptor("00002902-0000-1000-8000-00805f9b34fb");
+
+                NotifyDescriptorValue = await NotifyDescriptor.ReadValueBytes();
+                JS.Log("NotifyDescriptorValue", NotifyDescriptorValue.Select(o => (int)o).ToArray());
+                await NotifyCharacteristic.StartNotifications();
+                DeviceId = BLEDevice.Id;
+                DeviceName = BLEDevice.Name!;
+                _reconnectTimer.Enabled = false;
+                Connected = true;
+            }
+            catch (Exception ex)
+            {
+                var err = ex.ToString();
+                var nmt = true;
+            }
+            finally
+            {
+                Connecting = false;
+                StateHasChanged();
+            }
+            return Connected;
+        }
         /// <summary>
         /// Connect to a display
         /// </summary>
         /// <returns></returns>
         public async Task<bool> Connect()
         {
-            if (Connected)
+            Reconnect = true;
+            if (Connected || Connecting)
             {
                 return Connected;
             }
+            Connecting = true;
             try
             {
                 // chrome://bluetooth-internals/#devices
@@ -517,25 +603,19 @@ namespace SpawnDev.MatrixLEDDisplay
                 BLEDevice = await bluetooth!.RequestDevice(options);
                 BLEDevice.OnGATTServerDisconnected += Device_OnGATTServerDisconnected;
                 //bleState = $"Connected to device {device.Name}";
-                BLEServer = await BLEDevice.GATT!.Connect();
-                BLEService = await BLEServer.GetPrimaryService(BLEServiceId);
-                // LED characteristic - WriteNoResponse
-                LEDCharacteristic = await BLEService.GetCharacteristic(LEDCharacteristicId);
-                // ? characteristic - Notify
-                NotifyCharacteristic = await BLEService.GetCharacteristic(NotifyCharacteristicId);
-                NotifyCharacteristic.OnCharacteristicValueChanged += SensorCharacteristicFound_OnCharacteristicValueChanged;
-                // NotifyDescriptor - not sure what the 2 byte value that can be read from this means. Only seen as 0x0000
-                NotifyDescriptor = await NotifyCharacteristic.GetDescriptor("00002902-0000-1000-8000-00805f9b34fb");
-                NotifyDescriptorValue = await NotifyDescriptor.ReadValueBytes();
-                JS.Log("NotifyDescriptorValue", NotifyDescriptorValue.Select(o => (int)o).ToArray());
-                await NotifyCharacteristic.StartNotifications();
-                DeviceId = BLEDevice.Id;
-                DeviceName = BLEDevice.Name;
-                Connected = true;
+                BLEServer = BLEDevice.GATT!;
+                await _Connect();
                 //timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             }
-            catch
-            { }
+            catch(Exception ex)
+            {
+                var err = ex.Message;
+                var nmt = true;
+            }
+            finally
+            {
+                Connecting = false;
+            }
             return Connected;
         }
         /// <summary>
@@ -548,13 +628,13 @@ namespace SpawnDev.MatrixLEDDisplay
         }
         void Device_OnGATTServerDisconnected(Event e)
         {
-            if (Connected)
-            {
-                Console.WriteLine("Disconnected");
-                Disconnect();
-            }
+            Disconnected();
             StateHasChanged();
         }
+        /// <summary>
+        /// If true, reconnect will be attempted if the device connection is lost.
+        /// </summary>
+        bool Reconnect { get; set; } = true;
         async void SensorCharacteristicFound_OnCharacteristicValueChanged(Event e)
         {
             if (NotifyDescriptor == null) return;
@@ -569,8 +649,17 @@ namespace SpawnDev.MatrixLEDDisplay
         /// <summary>
         /// Disconnect from the display
         /// </summary>
-        /// <param name="forget"></param>
-        public void Disconnect(bool forget = false)
+        public void Disconnect()
+        {
+            if (BLEServer == null) return;
+            Reconnect = false;
+            try
+            {
+                BLEServer.Disconnect();
+            }
+            catch { }
+        }
+        void Disconnected()
         {
             if (!Connected) return;
             Connected = false;
@@ -591,29 +680,15 @@ namespace SpawnDev.MatrixLEDDisplay
                 BLEService.Dispose();
                 BLEService = null;
             }
-            if (BLEServer != null)
-            {
-                if (BLEServer.Connected)
-                {
-                    // this will cause Device_OnGATTServerDisconnected to fire.
-                    BLEServer.Disconnect();
-                }
-                BLEServer.Dispose();
-                BLEServer = null;
-            }
-            if (BLEDevice != null)
-            {
-                // Forget is disabled... it is listed as a method for BluetoothDevice but does not exist in Chrome...
-                //if (forget) device.Forget();
-                BLEDevice.OnGATTServerDisconnected -= Device_OnGATTServerDisconnected;
-                BLEDevice.Dispose();
-                BLEDevice = null;
-            }
+            _reconnectTimer.Enabled = Reconnect;
         }
         /// <summary>
         /// Last source sent
         /// </summary>
         public List<RGBAImage> SourceData { get; } = new List<RGBAImage>();
+        /// <summary>
+        /// Last source sent with background color applied to transparent areas
+        /// </summary>
         public List<RGBImage> SentImages { get; } = new List<RGBImage>();
         /// <summary>
         /// Set to true when a slideshow is sent
@@ -637,7 +712,7 @@ namespace SpawnDev.MatrixLEDDisplay
             }
         }
         /// <summary>
-        /// Save the current data as teh static picture.
+        /// Save the last sent images.
         /// </summary>
         /// <returns></returns>
         public async Task SavePicture()
@@ -658,9 +733,11 @@ namespace SpawnDev.MatrixLEDDisplay
             return (byte)(gc * 255d);
         }
         /// <summary>
-        /// Sends an HTMLImageElement to the display.
+        /// Sends an HTMLImageElement to the display.<br/>
+        /// NOTE: Animated images will not work with this method.
         /// </summary>
         /// <param name="image"></param>
+        /// <param name="save">If true, the image will displayed and saved, otherwise it will just be displayed.</param>
         /// <returns></returns>
         public async Task SendImage(HTMLImageElement image, bool save = false)
         {
@@ -695,6 +772,7 @@ namespace SpawnDev.MatrixLEDDisplay
         /// Sends a 16x16 RGBA image to the display.
         /// </summary>
         /// <param name="imageData"></param>
+        /// <param name="save">If true, the image will displayed and saved, otherwise it will just be displayed.</param>
         /// <returns></returns>
         public async Task SendImage(RGBAImage imageData, bool save = false)
         {
@@ -799,11 +877,24 @@ namespace SpawnDev.MatrixLEDDisplay
         /// </summary>
         public void Dispose()
         {
+            Reconnect = false;
             Disconnect();
+            Disconnected();
+            if (BLEServer != null)
+            {
+                BLEServer.Dispose();
+                BLEServer = null;
+            }
+            if (BLEDevice != null)
+            {
+                // Forget is disabled... it is listed as a method for BluetoothDevice but does not exist in Chrome...
+                //if (forget) device.Forget();
+                BLEDevice.OnGATTServerDisconnected -= Device_OnGATTServerDisconnected;
+                BLEDevice.Dispose();
+                BLEDevice = null;
+            }
         }
-
         int _busy = 0;
-        public bool Busy => _busy > 0;
         void SetBusy(bool busy)
         {
             var busyi = busy ? _busy + 1 : _busy - 1;

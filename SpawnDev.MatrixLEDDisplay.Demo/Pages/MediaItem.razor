@@ -1,0 +1,101 @@
+﻿@using SpawnDev.MatrixLEDDisplay.Demo.Services
+<div class="media-library-item" style="cursor: pointer; @_Style" tabindex="0" @onclick="OnClick" @onclick:preventDefault="true" @oncontextmenu="OnContext" @oncontextmenu:preventDefault="true">
+    <div>
+        <img width="100" height="100" src="@ImageSrc" />
+    </div>
+    <div style="height: 5rem;">
+        @Name
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public MediaLibraryItem MediaLibraryItem { get; set; }
+
+    public string Name => MediaLibraryItem?.Name.Trim('/') ?? "";
+
+    public string ImageSrc => MediaLibraryItem?.Url ?? "";
+
+    [Parameter]
+    public string Style { get; set; } = "";
+
+    string _Style => $"{(Selected ? "background-color: orange;" : "")}{Style}";
+
+    [Parameter]
+    public bool Selected { get; set; }
+
+    [Inject]
+    ContextMenuService ContextMenuService { get; set; } = default!;
+
+    [Inject]
+    DialogService DialogService { get; set; } = default!;
+
+    [Inject]
+    NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    MediaLibraryManager MediaLibraryManager { get; set; } = default!;
+
+    [Inject]
+    MatrixLEDDisplayService MatrixLEDDisplayService { get; set; } = default!;
+
+    void OnClick(MouseEventArgs args)
+    {
+        ShowContextMenuWithItems(args);
+    }
+    void OnContext(MouseEventArgs args)
+    {
+        ShowContextMenuWithItems(args);
+    }
+    void ShowContextMenuWithItems(MouseEventArgs args)
+    {
+        var options = new List<ContextMenuItem>();
+        foreach (var display in MatrixLEDDisplayService.Displays.Values)
+        {
+            var metadata = MatrixLEDDisplayService.GetMetaData(display);
+            options.Add(new ContextMenuItem()
+            {
+                Text = $"Send to: {metadata!.Name}",
+                Icon = "home",
+                Value = async () =>
+                {
+                    try
+                    {
+                        await display.SendImage(ImageSrc, true);
+                        NotificationService.Notify(NotificationSeverity.Success, "Image set");
+                    }
+                    catch
+                    {
+                        NotificationService.Notify(NotificationSeverity.Error, "Image set failed");
+                    }
+                },
+            });
+        }
+        options.Add(new ContextMenuItem()
+        {
+            Text = $"Remove",
+            Icon = "delete",
+            Value = async () =>
+            {
+                var confirm = await DialogService.Confirm($"Remove from media library? {Name}", "Are you sure?");
+                if (confirm != true) return;
+                await MediaLibraryManager.Remove(MediaLibraryItem.Name);
+            },
+        });
+        ContextMenuService.Open(args, options, OnMenuItemClick);
+    }
+    void OnMenuItemClick(MenuItemEventArgs args)
+    {
+        ContextMenuService.Close();
+        try
+        {
+
+            if (args.Value is Action action) action();
+            else if (args.Value is Func<Task> func) _ = func();
+        }
+        catch (Exception ex)
+        {
+            var nmt = true;
+        }
+    }
+}
