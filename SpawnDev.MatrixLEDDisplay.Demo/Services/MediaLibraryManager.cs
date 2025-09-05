@@ -19,15 +19,20 @@ namespace SpawnDev.MatrixLEDDisplay.Demo.Services
         NotificationService NotificationService;
         DialogService DialogService;
         public List<MediaLibraryItem> MediaItems { get; private set; } = new List<MediaLibraryItem>();
-        public MediaLibraryManager(BlazorJSRuntime js, NotificationService notificationService, DialogService dialogService)
+        HttpClient HttpClient;
+        AssetManifestService AssetManifestService;
+        public MediaLibraryManager(BlazorJSRuntime js, HttpClient httpClient, NotificationService notificationService, DialogService dialogService, AssetManifestService assetManifestService)
         {
             JS = js;
+            HttpClient = httpClient;
             NotificationService = notificationService;
             DialogService = dialogService;
+            AssetManifestService = assetManifestService;
             window = JS.Get<Window>("window");
         }
         async Task InitAsync()
         {
+            await AssetManifestService.Ready;
             window.AddEventListener("dragover", Callback.Create<DragEvent>(Window_OnDragOver, callbackGroup));
             window.AddEventListener("drop", Callback.Create<DragEvent>(Window_OnDrop, callbackGroup));
             LibraryCache = await Cache.OpenCache("MediaLibrary");
@@ -79,12 +84,21 @@ namespace SpawnDev.MatrixLEDDisplay.Demo.Services
         }
         async Task UpdateMediaItems()
         {
-            var files = await LibraryCache.GetAllFiles();
             var newList = new List<MediaLibraryItem>();
+            var included = await GetIncludedPixelArt();
+            foreach (var file in included)
+            {
+                using var resp = await JS.Fetch(file);
+                var fileBlob = await resp.Blob();
+                var mediaItem = new MediaLibraryItem(file, fileBlob, true);
+                newList.Add(mediaItem);
+            }
+            var files = await LibraryCache.GetAllFiles();
             foreach (var file in files)
             {
                 var fileBlob = await LibraryCache.ReadBlob(file);
-                var mediaItem = new MediaLibraryItem(file, fileBlob);
+                if (fileBlob == null) continue;
+                var mediaItem = new MediaLibraryItem(file, fileBlob, false);
                 newList.Add(mediaItem);
             }
             var previous = MediaItems.ToList();
@@ -131,6 +145,22 @@ namespace SpawnDev.MatrixLEDDisplay.Demo.Services
         void StateHasChanged()
         {
             OnStateChanged?.Invoke();
+        }
+        async Task<List<string>> GetIncludedPixelArt()
+        {
+            var ret = new List<string>();
+            var assetManifest = AssetManifestService.AssetManifest;
+            if (assetManifest != null)
+            {
+                foreach (var asset in assetManifest.Assets)
+                {
+                    if (asset.Url.StartsWith("pixelart/"))
+                    {
+                        ret.Add(asset.Url);
+                    }
+                }
+            }
+            return ret;
         }
     }
 }

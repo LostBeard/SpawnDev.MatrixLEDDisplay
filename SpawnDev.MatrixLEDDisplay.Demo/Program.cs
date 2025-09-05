@@ -33,6 +33,7 @@ builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<AppTrayService>();
 builder.Services.AddSingleton<MainLayoutService>();
 builder.Services.AddSingleton<ThemeTrayIconService>();
-builder.Services.AddSingleton<MediaLibraryManager>();
+builder.Services.AddSingleton<AssetManifestService>();
+builder.Services.AddSingleton<MediaLibraryManager>(); 
 
 await builder.Build().BlazorJSRunAsync();

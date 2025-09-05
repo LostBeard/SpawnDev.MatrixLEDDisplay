@@ -71,17 +71,20 @@
                 },
             });
         }
-        options.Add(new ContextMenuItem()
+        if (!MediaLibraryItem.ReadOnly)
         {
-            Text = $"Remove",
-            Icon = "delete",
-            Value = async () =>
+            options.Add(new ContextMenuItem()
             {
-                var confirm = await DialogService.Confirm($"Remove from media library? {Name}", "Are you sure?");
-                if (confirm != true) return;
-                await MediaLibraryManager.Remove(MediaLibraryItem.Name);
-            },
-        });
+                Text = $"Remove",
+                Icon = "delete",
+                Value = async () =>
+                {
+                    var confirm = await DialogService.Confirm($"Remove from media library? {Name}", "Are you sure?");
+                    if (confirm != true) return;
+                    await MediaLibraryManager.Remove(MediaLibraryItem.Name);
+                },
+            });
+        }
         ContextMenuService.Open(args, options, OnMenuItemClick);
     }
     void OnMenuItemClick(MenuItemEventArgs args)
