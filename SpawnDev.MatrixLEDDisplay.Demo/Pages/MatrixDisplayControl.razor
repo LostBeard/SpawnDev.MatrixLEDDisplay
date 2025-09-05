@@ -12,6 +12,7 @@
             <RadzenMenuItem Icon="image" title="Test image" disabled="@(!display.Connected)" Click=@(() => LoadPenguinImage(display, true)) /> *@
             <RadzenMenuItem Icon="file_open" title="Load image file" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.SelectAndSendImage(true)) />
             <RadzenMenuItem Icon="replay" title="Reset" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.Reset()) />
+            <RadzenMenuItem Icon="repeat" title="Resend" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.Resend()) />
             <RadzenMenuItem Icon="power_off" title="Power off" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.PowerOff()) />
             <RadzenMenuItem Icon="power" title="Power on" disabled="@(!Display.Connected || Busy)" Click=@(() => Display.PowerOn()) />
             @* <RadzenMenuItem Icon="slideshow" title="Slideshow mode" disabled="@(!display.Connected)" Click=@(() => display.StartSlideShowMode()) /> *@
