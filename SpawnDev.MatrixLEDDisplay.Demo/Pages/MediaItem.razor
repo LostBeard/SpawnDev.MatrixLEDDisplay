@@ -12,7 +12,7 @@
     [Parameter]
     public MediaLibraryItem MediaLibraryItem { get; set; }
 
-    public string Name => MediaLibraryItem?.Name.Trim('/') ?? "";
+    public string Name => MediaLibraryItem?.Name.Trim('/').Split('/').Last() ?? "";
 
     public string ImageSrc => MediaLibraryItem?.Url ?? "";
 
