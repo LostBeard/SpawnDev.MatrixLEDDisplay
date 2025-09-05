@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "SpawnDev.MatrixLEDDisplay.Demo",
   "resources": {
-    "hash": "sha256-BWOgLpmRtB4KHV+0a7P8Qn+vsw6MkL/ByixySQTRbO4=",
+    "hash": "sha256-8yD+4UjacP8n/cLRewLqLq00M1uPqeFvgHU2PdUAqGI=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-S5Rxt6HREzO+r35Xxsw/5WP2LZaY1rUCtPCTv6YZBCs="
     },
@@ -56,7 +56,7 @@
       "System.Linq.Queryable.wasm": "sha256-7jnB4XoPtBy5JOju5KcelaFpEXqs0X9xUu5DgAnC8VA=",
       "System.Linq.wasm": "sha256-hpdN8pOh7qDCwVMOF6w650DqhgyT5fadIOCcUqP2jPQ=",
       "System.Memory.wasm": "sha256-5FDDB5vw0Z1SHH0QkvImXHLFzBuVBFByR2m1mwHWZzo=",
-      "System.Net.Http.wasm": "sha256-m7CmAg3/6Rywzy/AB0L69KVyhj54wxToQ22gvVQefts=",
+      "System.Net.Http.wasm": "sha256-7QjVq6xdSxCgbXAtxC4wVCoH9mNKci08u9CbtRr4weI=",
       "System.Net.Primitives.wasm": "sha256-rT4zzpdRbSZXi/Jn/0VFoIpn8szUKu8qHUCQgRMBYXs=",
       "System.ObjectModel.wasm": "sha256-qxQanIGSE9kHBGxmDwHSKWKV4QUn3ZSMmXVP9wJ6iyM=",
       "System.Private.Uri.wasm": "sha256-hqbH7Sk3gFyXENtOqKdB8qaPEF/ErYU3eckGOnswY/0=",
@@ -82,8 +82,8 @@
       "System.Xml.XDocument.wasm": "sha256-Jko0vukE6+krICixdxcj4vyrVsPz+KCYLvj/0hUb9mI=",
       "System.wasm": "sha256-/Ib2sECJIp5OmAw2FVP/3jA36Bh6yA6fac798DlmOd8=",
       "System.Private.CoreLib.wasm": "sha256-5X1mqaJJjLYom/R8pmFdSo94uGQJcFtkyQwchq66aWk=",
-      "SpawnDev.MatrixLEDDisplay.wasm": "sha256-1d8N818I+z1YW/lCMQOqfNXuDbCP31Sx4Btcbwq3bKo=",
-      "SpawnDev.MatrixLEDDisplay.Demo.wasm": "sha256-0oT6KRaeFle9gGtu5fZsBtoxDc5meQeEToTcDgNzwcE="
+      "SpawnDev.MatrixLEDDisplay.wasm": "sha256-b3ORh0+gGrswJ6+gBiXVtYSK1JNv+yBKiAZE8n8vUj8=",
+      "SpawnDev.MatrixLEDDisplay.Demo.wasm": "sha256-hPatziTISRn3JkocjhRdWF0fvPsJ4oK2Lv+AVTSqORQ="
     },
     "libraryInitializers": {
       "SpawnDev.BlazorJS.lib.module.js": "sha256-MSEFzzIHfyaslxH4GvsWrzxOUHz5n4SKxG0AiWpiYV0="
