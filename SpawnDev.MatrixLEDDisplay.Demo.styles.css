@@ -121,6 +121,15 @@ main[b-54sc4du38x] {
 .display-control[b-pt1ez207rp]  i {
     margin: 0;
 }
+/* /Pages/MediaItem.razor.rz.scp.css */
+.media-library-item[b-109u8fw106] {
+    background-color: transparent;
+    border-radius: 0.5rem;
+}
+
+    .media-library-item:hover[b-109u8fw106] {
+        background-color: #80808080;
+    }
 /* /UI/UIButton.razor.rz.scp.css */
 button[b-322l7xghr8] {
     padding: 4px 2px 2px 2px;
