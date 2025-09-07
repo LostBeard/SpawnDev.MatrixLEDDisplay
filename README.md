@@ -6,6 +6,7 @@ Blazor WebAssembly code and demo app for communicating with the "Matrix LED Disp
 - Display `.jpg`, `.png`, or `.gif` images on your 16x16 LED display using your web browser and Bluetooth.
 - Animated `.gif` images are supported (limited to 8 frames.)
 - No graffiti mode at this time.
+- Media library for easy image management
 
 ![Matrix LED Display](https://raw.githubusercontent.com/LostBeard/SpawnDev.MatrixLEDDisplay/master/SpawnDev.MatrixLEDDisplay.Demo/wwwroot/mi-matrix-display-400x334.png)
 
