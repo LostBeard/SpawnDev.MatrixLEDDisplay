@@ -9,7 +9,7 @@ Blazor WebAssembly code and demo app for communicating with the "Matrix LED Disp
 
 ![Matrix LED Display](https://raw.githubusercontent.com/LostBeard/SpawnDev.MatrixLEDDisplay/master/SpawnDev.MatrixLEDDisplay.Demo/wwwroot/mi-matrix-display-400x334.png)
 
-This neat 160mm (6.3 inch) square USB powered display features a 16x16 multi-color LED grid
+This neat 178mm (7 inch) square USB powered display features a 16x16 multi-color LED grid
 and can be found at places like Walmart [here](https://www.walmart.com/ip/Merkury-Innovations-Bluetooth-Matrix-LED-Pixel-Display/5150283693) for about $20. 
 
 ## The problem
