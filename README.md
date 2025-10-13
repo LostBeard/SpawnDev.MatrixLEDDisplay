@@ -44,3 +44,9 @@ Services:
     - Descriptors:  
       - 00002902-0000-1000-8000-00805f9b34fb  
 - 0000af30-0000-1000-8000-00805f9b34fb 
+
+
+## Thanks
+- [offe](https://github.com/offe) - Thank you for your protocol work and the tips on how to snoop on and analyze Bluetooth communication on Android.
+- Turbo - You are my sunshine. This project is dedicated to you.
+- Babe - I love you to the moon and back.
