@@ -1,1 +1,1 @@
-/* Manifest version: bMg/hLmj */
+/* Manifest version: EZnG/3QS */

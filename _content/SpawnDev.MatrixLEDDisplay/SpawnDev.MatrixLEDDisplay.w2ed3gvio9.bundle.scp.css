@@ -1,4 +1,4 @@
-/* /Components/LEDMatrix.razor.rz.scp.css */
+/* _content/SpawnDev.MatrixLEDDisplay/Components/LEDMatrix.razor.rz.scp.css */
 .led-matrix[b-ewizjrd0aq] {
     border: 1px solid black;
     display: inline-block;
@@ -24,7 +24,7 @@ button[b-ewizjrd0aq] {
     margin: 0;
     padding: 0;
 }
-/* /Components/PixelArtView.razor.rz.scp.css */
+/* _content/SpawnDev.MatrixLEDDisplay/Components/PixelArtView.razor.rz.scp.css */
 .led-matrix[b-6v9uwk2gfv] {
     border: 1px solid black;
     display: inline-block;
